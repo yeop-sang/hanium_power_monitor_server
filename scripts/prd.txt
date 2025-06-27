@@ -1,0 +1,236 @@
+# Product Requirements Document for Power Measurement Service Server Setup
+
+## 1. Introduction
+
+This product is a power consumption measurement service designed to help users monitor and analyze their electricity usage, along with environmental data. It addresses the problem of opaque energy consumption by collecting real-time sensor data (including temperature, humidity, brightness, and electric power), storing it, and presenting it through an intuitive web interface. Its value lies in empowering users to understand their energy patterns, identify potential savings, and gain insights from AI-driven analysis of their usage, specifically focusing on ESG (Environmental, Social, Governance) reporting for environmental aspects, including carbon emission calculations. 
+
+The primary users are individuals or small businesses seeking to optimize their energy consumption. Data from the measurement device will be transmitted in a specific JSON format, with a timestamp indicating the device's measurement time, and an expected transmission frequency of every 5 seconds. The collected data will be preserved indefinitely in the MySQL database. Critical consideration will be given to ensuring no data loss, even if it means allowing some duplication or delayed real-time visibility during network outages.
+
+**Measurement Data JSON Format Example:**
+```json
+{
+    "deviceCode": 123,
+    "timestamp": "2023-06-27T14:30:00Z", // Device-generated timestamp
+    "temp": 23.7,
+    "humidity": 60.5,
+    "brightness": 700,
+    "electric": 900
+}
+```
+
+## Core Features
+
+### Real-time Data Collection
+- **What it does:** Collects power consumption and environmental data (`deviceCode`, `timestamp`, `temp`, `humidity`, `brightness`, `electric`) from an Arduino/ESP32 module, every 5 seconds, including the device's measurement timestamp.
+- **Why it's important:** Provides immediate insights into current electricity usage and environmental conditions, while ensuring data integrity and accurate time correlation.
+- **How it works:** ESP32 publishes data in the specified JSON format via MQTT to the server, with mechanisms (e.g., QoS 1/2, persistent sessions) to minimize data loss.
+
+### Data Storage
+- **What it does:** Persistently stores collected power consumption and environmental data indefinitely. Data integrity is prioritized, allowing for eventual consistency over immediate real-time updates during network issues.
+- **Why it's important:** Enables comprehensive historical analysis and trend identification across various sensor readings.
+- **How it works:** Flask backend receives MQTT data, parses the JSON (including the device's timestamp), and saves the individual fields to a MySQL database.
+
+### Web-based Visualization
+- **What it does:** Displays power consumption and environmental data, trends, and summaries through a user-friendly web interface.
+- **Why it's important:** Makes complex data easily understandable and accessible to users for comprehensive monitoring.
+- **How it works:** Vue.js frontend fetches data from the Flask API and renders interactive charts/dashboards.
+
+### AI-driven ESG Report Generation (Environmental Focus, including Carbon Emissions)
+- **What it does:** Analyzes power and environmental data using an LLM (Claude API) to generate ESG reports focused solely on environmental aspects (E in ESG), including calculated carbon emissions, personalized energy-saving tips and insights, utilizing recent 3 months of data. The output will follow a structured table format for key metrics and will initially be displayed on the web.
+- **Why it's important:** Provides intelligent, actionable recommendations based on multi-dimensional data, specifically tailored for environmental sustainability reporting, and presents them in a standardized, easy-to-understand format, now with quantifiable carbon impact.
+- **How it works:** Flask backend communicates with the AI/LLM module, which queries MySQL for recent 3 months of data. The LLM will calculate carbon emissions from power consumption using the given factor (0.478 kgCO₂/kWh) and then use Claude API for analysis to produce ESG-focused insights and reports formatted for web display and eventual PDF export.
+
+## User Experience
+
+### User Personas
+- **Homeowner:** Wants to see daily/weekly power usage, environmental conditions (temp, humidity), identify energy hogs, and get simple tips to reduce bills. Also interested in understanding their household's environmental footprint for personal awareness, including their carbon emissions.
+- **Small Business Owner:** Needs to track energy consumption for specific equipment or departments, analyze peak usage times, and optimize operational costs, potentially correlating with environmental factors like brightness/temperature. Keen on generating simplified ESG-like reports to showcase sustainability efforts, now including carbon footprint.
+
+### Key User Flows
+1. User opens the web interface.
+2. The dashboard displays current electric power consumption prominently, along with other real-time sensor data.
+3. User can view individual trends for all sensor values (electric power, temp, humidity, brightness) over selected periods, based on the device's timestamp.
+4. User can request an AI-generated ESG-focused report based on daily/weekly total power consumption summaries (utilizing recent 3 months of data). The report will include calculated carbon emissions and will be displayed on the website initially, with an option for PDF export.
+
+### UI/UX Considerations
+- Clean, intuitive dashboard design.
+- Easy navigation between different data views (daily, weekly, monthly).
+- Responsive design for various devices (mobile, tablet, desktop).
+- Clear visual representation of data (charts, graphs) for multiple data types, prioritizing current electric power display and individual sensor trends.
+- Accessible interface for generating and viewing ESG reports, including tabular data for energy usage, recycling, and carbon emissions.
+
+## Technical Architecture
+
+### System Components
+- **Power Measurement Module:** Arduino + ESP32 (with RTOS), collects data every 5 seconds and sends via WiFi. Prioritize guaranteed delivery over real-time for data integrity.
+- **WiFi Network:** Communication backbone for all components.
+- **Server (Raspberry Pi):** Hosts Docker containers for core services.
+
+### Docker Containers
+- **MQTT Broker (Mosquitto):** Message queue for device-to-server communication. Will be configured for persistence and potentially QoS 1/2 to ensure message delivery.
+- **Flask Application:** Python backend, handles MQTT subscription, JSON parsing, API endpoints, MySQL interaction, and LLM module integration. Will manage incoming data with an emphasis on data integrity (e.g., handling potential duplicates from QoS 1/2) and explicitly use the device-generated timestamp.
+- **Vue.js Application:** Frontend web interface, consumes Flask APIs.
+- **MySQL Database:** Persistent storage for power consumption and environmental data, with indefinite retention.
+- **AI/LLM Module:** Placeholder for a Python application that interfaces with the Claude API for data analysis and ESG report generation. This module will query MySQL for recent 3 months of data, calculate carbon emissions based on power consumption, and generate structured output (e.g., JSON representing tables) for frontend rendering and PDF export. It will focus on 'E' in ESG.
+
+### Data Models
+**`power_readings` table:**
+- `id` (PK, INT, AUTO_INCREMENT)
+- `timestamp` (DATETIME, from device)
+- `device_code` (INT)
+- `temperature` (FLOAT)
+- `humidity` (FLOAT)
+- `brightness` (INT)
+- `electric` (FLOAT)
+
+### APIs and Integrations
+- **MQTT:** ESP32 publishes JSON payload (every 5 seconds) using a QoS level that ensures delivery (e.g., QoS 1), Flask subscribes. The JSON payload will include the `timestamp` field generated by the device.
+- **REST API (Flask):** Vue.js consumes data endpoints (e.g., `/api/power_data`, `/api/esg_report`).
+- **Internal API (Flask to LLM):** Flask calls LLM module for ESG report generation and analysis.
+- **Claude API:** AI/LLM module interacts with Anthropic's Claude API.
+
+### Infrastructure Requirements
+- Raspberry Pi with sufficient compute and storage.
+- Stable WiFi network.
+- Docker runtime environment.
+
+## Development Roadmap
+This roadmap focuses on establishing the core server infrastructure and a minimal working prototype, specifically adapting to the new data format, indefinite retention, prioritizing specific dashboard visualizations, and enabling ESG report generation with structured output focused on environmental aspects using recent data, including carbon emission calculations.
+
+### Phase 1: Foundation Setup
+**MVP Requirements:**
+- Install Docker and Docker Compose on Raspberry Pi.
+- Create base `docker-compose.yml` defining `mosquitto`, `mysql`, `flask_app`, `vue_app`, `ai_llm_module` (placeholder) services.
+- Configure network for inter-service communication.
+
+### Phase 2: Core Backend and Database (Data Format Adapted, Indefinite Retention & Data Integrity Focus)
+**MVP Requirements:**
+- Develop basic Flask app (`app.py`):
+    - Implement MQTT client to subscribe to power data topics, expecting messages every 5 seconds. Configure MQTT client to handle potential duplicates (QoS 1 or 2) and prioritize data receipt over real-time freshness during outages.
+    - Parse incoming JSON payload from MQTT, specifically extracting `deviceCode`, `timestamp` (from device), `temp`, `humidity`, `brightness`, and `electric`.
+    - Implement logic to store parsed data into MySQL, matching the updated `power_readings` table schema, ensuring indefinite data retention and handling potential duplicate entries gracefully.
+- Create `requirements.txt` for Flask.
+- Develop MySQL `init.sql` script with the updated `power_readings` table schema.
+- Create `Dockerfile` for Flask app.
+- Verify Flask app can receive JSON MQTT messages, parse them correctly, and save to MySQL, handling delivery guarantees.
+
+### Phase 3: Frontend Integration (Prioritized Visualizations)
+**MVP Requirements:**
+- Develop basic Vue.js app to fetch and display power and environmental data from Flask API.
+- Create a primary dashboard component that prominently displays current electric power consumption.
+- Implement visualization components to show individual trends for all sensor values over selectable periods, aligned with the device's timestamps.
+- Implement a component/feature to display daily/weekly total power consumption summaries.
+- Configure basic Vue.js routing (if applicable for a single page).
+- Create `Dockerfile` for Vue.js app.
+- (Optional) Add Nginx config for Vue.js static serving.
+- Verify Vue.js can display all specified data types and visualizations from Flask.
+
+### Phase 4: AI/LLM Module for ESG Report Generation (Personalized, Structured, Environmental Focus, Carbon Emissions)
+**MVP Requirements:**
+- Implement a Flask endpoint to trigger ESG report generation via the AI/LLM module.
+- The AI/LLM module will query MySQL for recent 3 months of power and environmental data, including daily/weekly power summaries.
+- The AI/LLM module will calculate carbon emissions from the retrieved `electric` data using a factor of **0.478 kgCO₂/kWh**.
+- The AI/LLM module will use Claude API to generate text for an ESG-focused report (Environmental section only), focusing on personalized energy-saving tips based on analyzed correlations and including calculated carbon emissions.
+- The generated report will include structured data in a format suitable for displaying the provided table examples, now including a "Carbon Emissions" table.
+- The generated report should be returned to Flask for direct display on the website.
+
+### Future Enhancements
+- Functionality to export the ESG report as a PDF.
+- User authentication and multi-user support, starting after MVP.
+- Device management (adding/removing power measurement modules).
+- Notifications for anomalies or high usage.
+- Advanced AI analyses like predictive modeling for power consumption.
+
+## Logical Dependency Chain
+1. **Raspberry Pi OS & Docker Installation:** Absolute foundational step.
+2. **Docker Compose File:** Defines the entire service ecosystem. Cannot proceed with individual services without this.
+3. **MySQL & MQTT Broker Services:** These provide core infrastructure that Flask depends on. They should be set up and running first. MQTT broker configuration should prioritize message delivery reliability.
+4. **Flask Backend (with JSON parsing, 5-sec ingestion & Data Integrity):** Depends on MQTT for input and MySQL for output/storage. A functional Flask app is crucial.
+5. **Vue.js Frontend (Prioritized Visualizations):** Depends on the Flask API to retrieve data.
+6. **AI/LLM Module for ESG Report Generation:** Depends on a working data pipeline (Flask -> MySQL with rich, historical data).
+
+## Risks and Mitigations
+
+### Technical Challenges
+- **Risk:** Raspberry Pi performance limitations.
+- **Mitigation:** Use lean images, optimize Docker Compose, offload intensive LLM processing to cloud APIs (Claude API), monitor resource usage.
+- **Risk:** Docker networking complexity.
+- **Mitigation:** Use a simple bridge network, ensure clear naming and port mappings, test connectivity diligently.
+- **Risk:** Incorrect JSON parsing or data type mismatches.
+- **Mitigation:** Implement robust error handling and validation in Flask. Thoroughly test data insertion.
+- **Risk:** High volume of data impacting MySQL performance.
+- **Mitigation:** Monitor performance. Consider indexing relevant columns (`timestamp`, `device_code`).
+- **Risk:** MQTT message loss or duplication.
+- **Mitigation:** Configure MQTT QoS 1 or 2. Implement duplicate detection/idempotency logic in Flask. Prioritize durable sessions.
+- **Risk:** Inaccurate carbon emission calculation.
+- **Mitigation:** Acknowledge the fixed emission factor. Consider user-configurable factors in the future.
+
+### MVP Definition
+- **Risk:** Scope creep.
+- **Mitigation:** Strictly adhere to defined MVP features. Prioritize getting a complete data flow and the core ESG report generation.
+
+### Resource Constraints
+- **Risk:** Limited development time/expertise.
+- **Mitigation:** Break down tasks into small units. Leverage Claude for assistance. Use well-documented libraries.
+
+### API Key Management
+- **Risk:** Exposure of sensitive API keys.
+- **Mitigation:** Use Docker Compose's `.env` file and ensure it is in `.gitignore`.
+
+### Data Integrity/Loss
+- **Risk:** Data loss during MySQL container recreation.
+- **Mitigation:** Properly configure Docker volumes for MySQL data persistence.
+
+### ESG Report Quality & Personalization
+- **Risk:** LLM-generated reports may lack specificity or fail to represent tabular data accurately.
+- **Mitigation:** Provide clear, structured prompts to the LLM with specific data. Iteratively refine prompts based on quality reviews.
+
+### PDF Export Complexity
+- **Risk:** Generating a well-formatted PDF from web content can be complex.
+- **Mitigation:** Initially focus on web display. Research libraries for future enhancement.
+
+## Appendix
+
+- **Key Technologies:** Docker, Docker Compose, Flask, Vue.js, MySQL, Mosquitto MQTT Broker, Claude API.
+- **Assumed Knowledge:** Basic Linux command line, Python, JavaScript, SQL.
+- **Carbon Emission Factor:** 0.478 kgCO₂/kWh
+
+### Desired ESG Report Table Formats (LLM Output Structure Reference)
+*Data will be dynamic from DB, not fixed years.*
+
+**Energy Usage**
+| Category | Unit | Period 1 (e.g., Jan 2023) | Period 2 (e.g., Feb 2023) | Period 3 (e.g., Mar 2023) |
+|---|---|---|---|---|
+| Total Energy Usage | TJ | [Value] | [Value] | [Value] |
+| Electricity | | [Value] | [Value] | [Value] |
+| City Gas (LNG) | | [Value] | [Value] | [Value] |
+| Steam | | [Value] | [Value] | [Value] |
+| Renewable Energy Total| | [Value] | [Value] | [Value] |
+| Non-Renewable Energy Total| | [Value] | [Value] | [Value] |
+
+**Renewable Energy Usage**
+| Location | Unit | Period 1 | Period 2 | Period 3 |
+|---|---|---|---|---|
+| Gumi Plant | MWh | [Value] | [Value] | [Value] |
+| Indong Plant | | [Value] | [Value] | [Value] |
+| Donghae Plant | | [Value] | [Value] | [Value] |
+
+**Domestic Waste Power/Telecom Cable Plastics Voluntary Collection & Recycling**
+| Category | Unit | Period 1 | Period 2 | Period 3 |
+|---|---|---|---|---|
+| Plastic Usage | Ton | [Value] | [Value] | [Value] |
+| Collection & Recycling | | [Value] | [Value] | [Value] |
+| Collection & Recycling Rate | % | [Value] | [Value] | [Value] |
+
+**Domestic Plastic Packaging Collection & Recycling**
+| Category | Unit | Period 1 | Period 2 | Period 3 |
+|---|---|---|---|---|
+| Plastic Packaging Shipped | Ton | [Value] | [Value] | [Value] |
+| Recycling Obligation | | [Value] | [Value] | [Value] |
+| Amount Recycled | | [Value] | [Value] | [Value] |
+
+**Carbon Emissions**
+| Category | Unit | Period 1 | Period 2 | Period 3 |
+|---|---|---|---|---|
+| Total Carbon Emissions | kgCO₂ | [Value] | [Value] | [Value] |
+*Calculated based on electricity data using a factor of 0.478 kgCO₂/kWh.*
