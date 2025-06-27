@@ -1,0 +1,30 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- **Rule: Commit on Major Task Completion**
+  - **When:** When a major task (and all its subtasks) is marked as `done`, all related code changes must be committed.
+  - **Purpose:**
+    - To clearly separate units of work.
+    - To make the history of code changes easy to track.
+    - To make it easier to roll back to a specific task's point in case of issues.
+
+- **Commit Message Guidelines:**
+  - **Format:** `type(scope): subject` (Following Conventional Commits format)
+  - **`type`:** `feat`(new feature), `fix`(bug fix), `docs`(documentation), `refactor`, `chore`(other chores), etc.
+  - **`scope`:** The modified module or task number (e.g., `task-3`, `docker`).
+  - **`subject`:** A concise summary of the work completed in the task.
+  - **Body (Optional):**
+    - Explain the reason for the change and other details.
+    - Reference the completed task using the format `Closes #<task-id>` (e.g., `Closes #3`).
+
+- **Process:**
+  1.  **Task Completion:** Finish all coding and configuration work related to a single major task (e.g., Task 3).
+  2.  **Status Change:** Mark the task as `done` using the `set_task_status --id=<task-id> --status=done` command.
+  3.  **Stage Changes:** Stage the modified files using `git add .` or `git add <relevant-files>`.
+  4.  **Commit:** Commit with a meaningful message following the guidelines.
+      ```bash
+      git commit -m "feat(mqtt): Complete MQTT broker persistence setup" -m "Completed mosquitto.conf and docker-compose.yml setup as per Task 3 requirements and verified normal operation. Closes #3"
+      ```
+  5.  **Proceed to Next Task:** Start the next task using the `next_task` command.

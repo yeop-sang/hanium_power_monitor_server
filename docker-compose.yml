@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  ai_llm_module:
+    build: ./ai_llm_module
+    restart: always
+    depends_on:
+      - mysql
+      - flask_app
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: power_measurement
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    networks:
+      - power-flow-net
+
+  flask_app:
+    build: ./flask_app
+    restart: always
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mysql
+      - mosquitto
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: power_measurement
+      MQTT_BROKER: mosquitto
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY}
+    networks:
+      - power-flow-net
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - power-flow-net
+
+  mysql:
+    image: mysql:8.0
+    restart: always
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: power_measurement
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - power-flow-net
+
+  vue_app:
+    build: ./vue_app
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - flask_app
+    networks:
+      - power-flow-net
+
+networks:
+  power-flow-net:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  mosquitto_data: 
