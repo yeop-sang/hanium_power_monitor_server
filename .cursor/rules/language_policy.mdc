@@ -1,5 +1,18 @@
 ---
-description:
-globs:
+description: 
+globs: 
 alwaysApply: false
 ---
+- **Rule: English Only for Rules and Tasks**
+  - **Scope:** This rule applies to all Cursor rule files (`.mdc`) and Taskmaster task definitions (`tasks.json`).
+  - **Requirement:** All content, including descriptions, details, titles, and comments within these files, must be written in English.
+
+- **Rationale:**
+  - **Consistency:** Ensures a consistent language across all project management and meta-level documentation.
+  - **Collaboration:** Makes the project accessible to a wider range of collaborators who may not speak other languages.
+  - **Tool Compatibility:** Prevents potential encoding or parsing issues with various development tools.
+
+- **Process:**
+  - When creating or modifying a Cursor rule, write all text in English.
+  - When creating or updating a Taskmaster task (e.g., using `add_task`, `update_task`), ensure all prompts and descriptions are provided in English.
+

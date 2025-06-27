@@ -100,14 +100,14 @@
         "dependencies": [
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": []
       },
       {
         "id": 4,
         "title": "Set Up MySQL Database with Schema",
         "description": "Create the MySQL database schema for storing power measurement data with indefinite retention, focusing on the power_readings table structure. Ensure that the schema explicitly documents the measurement units for each column: temperature (Celsius), humidity (percentage), brightness (numeric value), and electric (mA).",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
           2
         ],
@@ -206,7 +206,7 @@
     ],
     "metadata": {
       "created": "2025-06-27T06:38:32.342Z",
-      "updated": "2025-06-27T10:07:00.223Z",
+      "updated": "2025-06-27T10:35:06.426Z",
       "description": "Tasks for master context"
     }
   }
