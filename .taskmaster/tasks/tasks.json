@@ -127,7 +127,7 @@
           3,
           4
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -231,7 +231,7 @@
               8
             ],
             "details": "Write tests that simulate real-world workflows and edge cases, ensuring end-to-end system reliability.",
-            "status": "in-progress",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -240,7 +240,7 @@
             "description": "Document the backend architecture, setup instructions, and API usage. Conduct a final code review and refactor as needed.",
             "dependencies": [],
             "details": "Prepare README, API docs, and developer guides. Review code for maintainability, security, and performance.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           }
         ]
@@ -256,7 +256,99 @@
           5
         ],
         "status": "pending",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Project Setup and Environment Configuration",
+            "description": "Initialize the project repository, set up the development environment, and configure essential tools and dependencies.",
+            "dependencies": [],
+            "details": "Create a new repository, initialize the project with appropriate framework (React/Vue/Angular), set up package.json, install core dependencies, configure linting and formatting tools, and establish the project structure with appropriate folders for components, services, and assets.",
+            "status": "in-progress",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Docker and Nginx Configuration",
+            "description": "Set up Docker containerization and Nginx for serving the application.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create Dockerfile for the frontend application, configure Nginx as a reverse proxy, set up Docker Compose for local development, and ensure proper configuration for production deployment with appropriate caching and compression settings.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Dashboard Layout and Navigation Implementation",
+            "description": "Develop the main dashboard layout and navigation components.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create responsive layout components, implement navigation bar/sidebar, design dashboard grid system, implement routing between different sections, and ensure consistent header/footer elements across the application.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Data Visualization Charts Development",
+            "description": "Implement various chart components for data visualization.",
+            "dependencies": [
+              3
+            ],
+            "details": "Select and integrate appropriate charting library (D3.js, Chart.js, etc.), develop reusable chart components (line charts, bar charts, pie charts), implement data transformation utilities, and ensure charts are interactive with tooltips and responsive to different screen sizes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "ESG Report Component Development",
+            "description": "Create components for displaying and interacting with ESG (Environmental, Social, and Governance) reports.",
+            "dependencies": [
+              3
+            ],
+            "details": "Design and implement ESG report templates, create data visualization specific to ESG metrics, develop filtering and sorting capabilities for ESG data, and implement export functionality for reports.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "API Integration and Data Management",
+            "description": "Implement services for API integration and data management throughout the application.",
+            "dependencies": [
+              1
+            ],
+            "details": "Create API service layer, implement authentication and authorization, develop data fetching and caching strategies, handle error states and loading indicators, and ensure proper data transformation between API and UI components.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Styling and UI Refinement",
+            "description": "Apply consistent styling across the application and refine the user interface.",
+            "dependencies": [
+              3,
+              4,
+              5
+            ],
+            "details": "Implement design system or UI component library, create custom CSS/SCSS styles, ensure consistent theming, implement dark/light mode if required, and optimize visual elements for different devices and screen sizes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "Testing and Responsive Design Validation",
+            "description": "Implement comprehensive testing and validate responsive design across devices.",
+            "dependencies": [
+              4,
+              5,
+              6,
+              7
+            ],
+            "details": "Write unit tests for components and services, implement integration tests for key user flows, perform cross-browser testing, validate responsive design on various devices and screen sizes, and conduct performance testing for data-heavy visualizations.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 7,
@@ -321,7 +413,7 @@
     ],
     "metadata": {
       "created": "2025-06-27T06:38:32.342Z",
-      "updated": "2025-06-27T14:46:10.269Z",
+      "updated": "2025-06-28T01:01:36.355Z",
       "description": "Tasks for master context"
     }
   }
