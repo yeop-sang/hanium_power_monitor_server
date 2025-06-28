@@ -15,11 +15,43 @@
   </div>
 </template>
 <script setup>
-import { ref, onMounted } from 'vue'
-const temp = ref(24.5)
-const humidity = ref(55)
-const brightness = ref(800)
-// later will fetch from API
+import { ref, onMounted, onUnmounted } from 'vue'
+import api from '../services/api.js'
+import socket from '../services/socket.js'
+
+const temp = ref('--')
+const humidity = ref('--')
+const brightness = ref('--')
+
+async function fetchLatest() {
+  try {
+    const { data } = await api.getPowerData({ limit: 1 })
+    if (data.length) {
+      const [d] = data
+      temp.value = d.temperature?.toFixed(1)
+      humidity.value = d.humidity?.toFixed(1)
+      brightness.value = d.brightness
+    }
+  } catch (e) {
+    console.error('Failed to fetch env data', e)
+  }
+}
+
+function handleSocket(payload) {
+  temp.value = payload.temperature?.toFixed(1)
+  humidity.value = payload.humidity?.toFixed(1)
+  brightness.value = payload.brightness
+}
+
+onMounted(() => {
+  fetchLatest()
+  setInterval(fetchLatest, 30000) // 30초마다 갱신
+  socket.on('reading', handleSocket)
+})
+
+onUnmounted(() => {
+  socket.off('reading', handleSocket)
+})
 </script>
 <style scoped>
 .env-grid{display:flex;gap:1rem}

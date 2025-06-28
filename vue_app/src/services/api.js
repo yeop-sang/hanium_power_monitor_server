@@ -14,7 +14,13 @@ export function generateESGReport() {
   return apiClient.post('/generate_esg_report');
 }
 
+// Fetch power readings; optional query params: { limit, timeRange, fields }
+export function getPowerData(params = {}) {
+  return apiClient.get('/power_data', { params });
+}
+
 export default {
   getESGReports,
-  generateESGReport
+  generateESGReport,
+  getPowerData
 }; 

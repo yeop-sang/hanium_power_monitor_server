@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 import json
 import logging
+from flask_socketio import SocketIO
 
 from modules.mqtt_client import MQTTClient
 from modules.database import Database
@@ -17,8 +18,10 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(name)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
+# Flask & SocketIO initialization
 app = Flask(__name__)
 CORS(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # --- Initializations ---------------------------------------------------
 try:
@@ -57,6 +60,19 @@ def on_message_callback(payload):
         # Insert into database
         db.insert_reading(device_code, timestamp, temp, humidity, brightness, electric)
         logging.info(f"Successfully inserted reading for device {device_code}")
+
+        # Emit data to connected WebSocket clients
+        try:
+            socketio.emit('reading', {
+                'device_code': device_code,
+                'timestamp': timestamp,
+                'temperature': temp,
+                'humidity': humidity,
+                'brightness': brightness,
+                'electric': electric
+            })
+        except Exception as e:
+            logging.error(f"SocketIO emit failed: {e}")
 
     except json.JSONDecodeError:
         logging.error(f"Error decoding JSON from payload: {payload}", exc_info=True)
@@ -100,4 +116,5 @@ if __name__ == '__main__':
     
     # Start Flask app
     port = int(os.environ.get('FLASK_PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_DEBUG', 'False') == 'True')
+    # Use SocketIO run to support WebSocket
+    socketio.run(app, host='0.0.0.0', port=port)

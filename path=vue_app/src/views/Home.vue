@@ -8,11 +8,7 @@ import CurrentPowerDisplay from '../components/CurrentPowerDisplay.vue'
   <section>
     <h1>Dashboard</h1>
     <CurrentPowerDisplay />
-    <div class="card">
-      <EnvironmentalData />
-    </div>
-    <div class="card">
-      <PowerChart />
-    </div>
+    <EnvironmentalData />
+    <PowerChart />
   </section>
 </template> 

@@ -31,21 +31,64 @@ onMounted(fetchReports);
 </script>
 
 <template>
-  <section>
-    <h2>ESG Reports</h2>
-    <button @click="handleGenerate" :disabled="loading">Generate Report</button>
+  <div class="card">
+    <h3>ESG Report</h3>
+    <button @click="handleGenerate" :disabled="loading" class="btn">
+      {{ loading ? 'Generating...' : 'Generate New Report' }}
+    </button>
     <p v-if="error" style="color:red">{{ error }}</p>
-    <ul>
-      <li v-for="r in reports" :key="r.id">
-        <a :href="r.url" target="_blank">Report {{ r.id }} - {{ new Date(r.created_at).toLocaleString() }}</a>
-      </li>
-      <li v-if="!reports.length">No reports yet.</li>
-    </ul>
-  </section>
+    <div v-if="reports.length">
+      <h4>Generated Reports:</h4>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>URL</th>
+            <th>Created At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="r in reports" :key="r.id">
+            <td>{{ r.id }}</td>
+            <td><a :href="r.url" target="_blank">{{ r.url }}</a></td>
+            <td>{{ new Date(r.created_at).toLocaleString() }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p v-if="!reports.length">No reports yet.</p>
+  </div>
 </template>
 
 <style scoped>
-button {
+.card {
+  padding: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.btn {
   margin: 0.5rem 0;
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.styled-table th,
+.styled-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.styled-table th {
+  background-color: #f8f9fa;
+}
+
+.styled-table tbody tr:hover {
+  background-color: #f8f9fa;
 }
 </style> 
