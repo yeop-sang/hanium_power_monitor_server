@@ -98,3 +98,32 @@ class Database:
             return True
         except mysql.connector.Error:
             return False
+
+    def create_esg_report(self):
+        """Generate dummy ESG report entry and return id, url."""
+        query = (
+            "INSERT INTO esg_reports (file_path, created_at) VALUES (%s, NOW())"
+        )
+        file_path = f"/reports/esg_report_{int(datetime.datetime.utcnow().timestamp())}.csv"
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(query, (file_path,))
+                    conn.commit()
+                    report_id = cursor.lastrowid
+                    return report_id, file_path
+        except mysql.connector.Error as err:
+            logging.error(f"Error inserting esg report: {err}", exc_info=True)
+            raise
+
+    def fetch_esg_reports(self):
+        """Fetch list of ESG reports."""
+        query = "SELECT id, file_path AS url, created_at FROM esg_reports ORDER BY created_at DESC"
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute(query)
+                    return cursor.fetchall()
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching esg reports: {err}", exc_info=True)
+            return []

@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS power_readings (
     INDEX idx_device_code (device_code)
 );
 
+CREATE TABLE IF NOT EXISTS esg_reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    file_path VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL
+);
+
 -- Create user with appropriate permissions
 -- Note: The user and password should be managed via environment variables in docker-compose,
 -- but we ensure the user has the right grants here.

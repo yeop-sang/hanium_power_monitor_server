@@ -19,6 +19,9 @@ def mock_db():
         {'id': 2, 'timestamp': datetime.datetime.now(), 'temperature': Decimal('26.5')},
     ]
     db.fetch_power_data.return_value = sample_data
+
+    # tests/test_api.py mock_db fixture 안에 아래 라인 추가
+    db.create_esg_report.return_value = (1, "/dummy.csv")
     return db
 
 @pytest.fixture
@@ -64,11 +67,9 @@ def test_not_implemented_endpoints(client):
     summary_response = client.get('/api/summary')
     assert summary_response.status_code == 501
     
+    # generate_esg_report now implemented, should return 201 or 200
     report_response = client.post('/api/generate_esg_report')
-    assert report_response.status_code == 501
+    assert report_response.status_code in (200, 201)
 
     summary_data = json.loads(summary_response.data)
     assert "not yet implemented" in summary_data['message']
-    
-    report_data = json.loads(report_response.data)
-    assert "not yet implemented" in report_data['message']

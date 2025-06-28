@@ -49,10 +49,19 @@ def setup_routes(db):
         # TODO: Implement summary logic (e.g., daily average, min/max)
         return jsonify({"message": "Summary endpoint not yet implemented."}), 501
 
+    @api_blueprint.route('/esg_reports', methods=['GET'])
+    def list_esg_reports():
+        """Returns list of available ESG reports."""
+        data = db.fetch_esg_reports() if db else []
+        serialized = [{k: json_serializer(v) for k, v in row.items()} for row in data]
+        return jsonify(serialized)
+
     @api_blueprint.route('/generate_esg_report', methods=['POST'])
-    def generate_esg_report():
-        """Placeholder for triggering ESG report generation."""
-        # TODO: Implement report generation logic
-        return jsonify({"message": "ESG report generation not yet implemented."}), 501
+    def generate_esg():
+        """Generates a dummy ESG report and returns its info."""
+        if not db:
+            return jsonify({"message": "Database not available"}), 500
+        report_id, url = db.create_esg_report()
+        return jsonify({"id": report_id, "url": url}), 201
 
     return api_blueprint
