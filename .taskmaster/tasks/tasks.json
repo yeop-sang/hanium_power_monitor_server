@@ -285,7 +285,7 @@
               1
             ],
             "details": "Create responsive layout components, implement navigation bar/sidebar, design dashboard grid system, implement routing between different sections, and ensure consistent header/footer elements across the application.",
-            "status": "pending",
+            "status": "done",
             "testStrategy": ""
           },
           {
@@ -296,7 +296,7 @@
               3
             ],
             "details": "Select and integrate appropriate charting library (D3.js, Chart.js, etc.), develop reusable chart components (line charts, bar charts, pie charts), implement data transformation utilities, and ensure charts are interactive with tooltips and responsive to different screen sizes.",
-            "status": "pending",
+            "status": "in-progress",
             "testStrategy": ""
           },
           {
@@ -413,7 +413,7 @@
     ],
     "metadata": {
       "created": "2025-06-27T06:38:32.342Z",
-      "updated": "2025-06-28T09:06:57.462Z",
+      "updated": "2025-06-28T09:33:06.406Z",
       "description": "Tasks for master context"
     }
   }

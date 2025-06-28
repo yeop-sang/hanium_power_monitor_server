@@ -1,6 +1,11 @@
+<script setup>
+import PowerChart from '../components/PowerChart.vue';
+import EnvironmentalData from '../components/EnvironmentalData.vue';
+</script>
 <template>
   <section>
     <h1>Dashboard</h1>
-    <p>Power & environmental data charts will appear here.</p>
+    <EnvironmentalData />
+    <PowerChart />
   </section>
 </template> 
