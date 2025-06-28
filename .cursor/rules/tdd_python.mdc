@@ -1,0 +1,61 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+- **TDD is a Core Principle**
+  - All new Python code that contains business logic must be accompanied by corresponding test code.
+  - This ensures code quality, maintainability, and reliability.
+
+- **Test File Location and Naming**
+  - For a module at `path/to/module.py`, the corresponding test file should be located at `tests/test_module.py`.
+  - A `tests` directory should exist at the root of the source code directory (e.g., `flask_app/tests`).
+
+- **Test Framework**
+  - The standard testing framework for this project is `pytest`.
+  - All tests should be written using `pytest` conventions.
+
+- **What to Test**
+  - **Public Functions/Methods**: Every public function or method should have at least one test case.
+  - **Business Logic**: Test the core logic and edge cases of your implementation.
+  - **Happy Path**: Include tests for expected, successful execution.
+  - **Error Conditions**: Include tests for expected failures, such as invalid input or error states.
+
+- **Exemptions**
+  - **Data classes or simple DTOs**: Files containing only data structures without significant logic may be exempt.
+  - **Configuration files**: Files that only contain configuration data do not require tests.
+  - **`__init__.py` files**: Empty `__init__.py` files or those with simple imports are exempt.
+  - **Generated files**: Automatically generated files do not require tests.
+
+- **Example**
+  - If you create `flask_app/modules/database.py`:
+  ```python
+  # flask_app/modules/database.py
+  class Database:
+      def insert_reading(self, ...):
+          # ... logic ...
+  
+      def fetch_power_data(self, ...):
+          # ... logic ...
+  ```
+
+  - You must also create `flask_app/tests/test_database.py`:
+  ```python
+  # flask_app/tests/test_database.py
+  import pytest
+  from modules.database import Database
+  
+  def test_insert_reading():
+      # ... test logic for insertion ...
+      assert True # or assert specific conditions
+  
+  def test_fetch_power_data():
+      # ... test logic for fetching data ...
+      assert True
+  ```
+
+- **Workflow**
+  1.  Write a failing test that defines a new function or improvement.
+  2.  Write the minimum amount of code to make the test pass.
+  3.  Refactor the code to improve its structure without changing its behavior.
+  4.  Repeat the cycle.
