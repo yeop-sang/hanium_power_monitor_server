@@ -8,7 +8,7 @@ services:
       - mysql
       - flask_app
     environment:
-      MYSQL_HOST: mysql
+      MYSQL_HOST: ${MYSQL_HOST}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: power_measurement
