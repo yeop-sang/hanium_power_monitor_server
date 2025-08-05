@@ -370,8 +370,74 @@
           4,
           5
         ],
-        "status": "pending",
-        "subtasks": []
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Project Setup and Directory Structure",
+            "description": "Initialize the AI/LLM module project, create the required directory structure, and set up version control.",
+            "dependencies": [],
+            "details": "Create the ai_llm_module/ directory with subfolders and files as specified (Dockerfile, requirements.txt, app.py, modules/ with __init__.py, database.py, claude_api.py, carbon_calculator.py). Initialize a git repository and add a README with high-level module goals.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Define Requirements and Dockerfile",
+            "description": "Specify Python dependencies and create a Dockerfile for containerized deployment.",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Write requirements.txt with all necessary packages (mysql-connector-python, python-dotenv, requests, flask, pandas). Create a Dockerfile that sets up a Python 3.9 environment, installs dependencies, and prepares the app for execution.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement Database Access Module",
+            "description": "Develop the database.py module to handle connections and queries for power consumption and related data.",
+            "dependencies": [
+              "7.1",
+              "7.2"
+            ],
+            "details": "Implement functions for connecting to the MySQL database, retrieving power consumption data, and supporting queries needed for carbon calculations and report generation.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Develop Carbon Calculation Logic",
+            "description": "Create the carbon_calculator.py module to compute carbon emissions from power consumption data.",
+            "dependencies": [
+              "7.3"
+            ],
+            "details": "Implement functions to process power data, apply emission factors, and output carbon emission values suitable for ESG reporting.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Integrate Claude API and Report Parsing",
+            "description": "Develop claude_api.py for Claude API integration and implement report parsing logic for ESG report generation.",
+            "dependencies": [
+              "7.4"
+            ],
+            "details": "Implement functions to send prompts and data to the Claude API, handle responses, and parse/generate structured ESG reports based on AI output and carbon calculations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement API Endpoint and Module/Unit Testing",
+            "description": "Expose the ESG report generation functionality via a Flask API endpoint and write unit tests for all modules.",
+            "dependencies": [
+              "7.5"
+            ],
+            "details": "Add a Flask route in app.py for ESG report requests, integrate all modules, and write unit tests for database, carbon calculator, Claude API integration, and the API endpoint using mock data and responses.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
       },
       {
         "id": 8,
@@ -510,7 +576,7 @@
     ],
     "metadata": {
       "created": "2025-06-27T06:38:32.342Z",
-      "updated": "2025-08-05T06:05:33.188Z",
+      "updated": "2025-08-05T06:53:49.612Z",
       "description": "Tasks for master context"
     }
   }
