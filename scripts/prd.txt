@@ -4,12 +4,14 @@
 
 This product is a power consumption measurement service designed to help users monitor and analyze their electricity usage, along with environmental data. It addresses the problem of opaque energy consumption by collecting real-time sensor data (including temperature, humidity, brightness, and electric power), storing it, and presenting it through an intuitive web interface. Its value lies in empowering users to understand their energy patterns, identify potential savings, and gain insights from AI-driven analysis of their usage, specifically focusing on ESG (Environmental, Social, Governance) reporting for environmental aspects, including carbon emission calculations. 
 
-The primary users are individuals or small businesses seeking to optimize their energy consumption. Data from the measurement device will be transmitted in a specific JSON format, with a timestamp indicating the device's measurement time, and an expected transmission frequency of every 5 seconds. The collected data will be preserved indefinitely in the MySQL database. Critical consideration will be given to ensuring no data loss, even if it means allowing some duplication or delayed real-time visibility during network outages.
+**Multi-Device Support:** The system is designed to handle multiple measurement devices simultaneously, allowing users to monitor different rooms, buildings, or equipment zones independently while providing comparative analysis and consolidated reporting across all connected devices.
+
+The primary users are individuals or small businesses seeking to optimize their energy consumption across multiple locations or zones. Data from measurement devices will be transmitted in a specific JSON format, with a timestamp indicating the device's measurement time, and an expected transmission frequency of every 5 seconds. The collected data will be preserved indefinitely in the MySQL database. Critical consideration will be given to ensuring no data loss, even if it means allowing some duplication or delayed real-time visibility during network outages.
 
 **Measurement Data JSON Format Example:**
 ```json
 {
-    "deviceCode": 123,
+    "deviceCode": "AA:BB:CC:DD:EE:FF", // MAC address for unique device identification
     "timestamp": "2023-06-27T14:30:00Z", // Device-generated timestamp
     "temp": 23.7,
     "humidity": 60.5,
@@ -21,179 +23,244 @@ The primary users are individuals or small businesses seeking to optimize their 
 ## Core Features
 
 ### Real-time Data Collection
-- **What it does:** Collects power consumption and environmental data (`deviceCode`, `timestamp`, `temp`, `humidity`, `brightness`, `electric`) from an Arduino/ESP32 module, every 5 seconds, including the device's measurement timestamp.
-- **Why it's important:** Provides immediate insights into current electricity usage and environmental conditions, while ensuring data integrity and accurate time correlation.
-- **How it works:** ESP32 publishes data in the specified JSON format via MQTT to the server, with mechanisms (e.g., QoS 1/2, persistent sessions) to minimize data loss.
+- **What it does:** Collects power consumption and environmental data (`deviceCode`, `timestamp`, `temp`, `humidity`, `brightness`, `electric`) from multiple Arduino/ESP32 modules, every 5 seconds, including the device's measurement timestamp.
+- **Why it's important:** Provides immediate insights into current electricity usage and environmental conditions across multiple locations, while ensuring data integrity and accurate time correlation.
+- **How it works:** Multiple ESP32 devices publish data in the specified JSON format via MQTT to the server, with mechanisms (e.g., QoS 1/2, persistent sessions) to minimize data loss.
+
+### Multi-Device Management
+- **What it does:** Manages multiple measurement devices simultaneously, allowing users to monitor, configure, and analyze data from different zones, rooms, or equipment.
+- **Why it's important:** Enables comprehensive multi-location energy management, allowing users to identify high-consumption areas and optimize energy usage across their entire facility.
+- **How it works:** 
+  - Each ESP32 device is uniquely identified by its MAC address (deviceCode)
+  - Central MQTT broker receives data from all devices
+  - Web interface provides device selection, filtering, and comparison capabilities
+  - Database stores all device data with proper device attribution
 
 ### Data Storage
-- **What it does:** Persistently stores collected power consumption and environmental data indefinitely. Data integrity is prioritized, allowing for eventual consistency over immediate real-time updates during network issues.
-- **Why it's important:** Enables comprehensive historical analysis and trend identification across various sensor readings.
-- **How it works:** Flask backend receives MQTT data, parses the JSON (including the device's timestamp), and saves the individual fields to a MySQL database.
+- **What it does:** Persistently stores collected power consumption and environmental data from all devices indefinitely. Data integrity is prioritized, allowing for eventual consistency over immediate real-time updates during network issues.
+- **Why it's important:** Enables comprehensive historical analysis and trend identification across various sensor readings and multiple devices.
+- **How it works:** Flask backend receives MQTT data from multiple devices, parses the JSON (including the device's timestamp and deviceCode), and saves the individual fields to a MySQL database with proper device identification.
 
 ### Web-based Visualization
-- **What it does:** Displays power consumption and environmental data, trends, and summaries through a user-friendly web interface.
-- **Why it's important:** Makes complex data easily understandable and accessible to users for comprehensive monitoring.
-- **How it works:** Vue.js frontend fetches data from the Flask API and renders interactive charts/dashboards.
+- **What it does:** Displays power consumption and environmental data, trends, and summaries through a user-friendly web interface with support for multi-device views and comparisons.
+- **Why it's important:** Makes complex data easily understandable and accessible to users for comprehensive monitoring across multiple devices and locations.
+- **How it works:** Vue.js frontend fetches data from the Flask API and renders interactive charts/dashboards with device filtering, comparison views, and consolidated displays.
 
 ### AI-driven ESG Report Generation (Environmental Focus, including Carbon Emissions)
-- **What it does:** Analyzes power and environmental data using an LLM (Claude API) to generate ESG reports focused solely on environmental aspects (E in ESG), including calculated carbon emissions, personalized energy-saving tips and insights, utilizing recent 3 months of data. The output will follow a structured table format for key metrics and will initially be displayed on the web.
-- **Why it's important:** Provides intelligent, actionable recommendations based on multi-dimensional data, specifically tailored for environmental sustainability reporting, and presents them in a standardized, easy-to-understand format, now with quantifiable carbon impact.
-- **How it works:** Flask backend communicates with the AI/LLM module, which queries MySQL for recent 3 months of data. The LLM will calculate carbon emissions from power consumption using the given factor (0.478 kgCO₂/kWh) and then use Claude API for analysis to produce ESG-focused insights and reports formatted for web display and eventual PDF export.
+- **What it does:** Analyzes power and environmental data from single devices or device groups using an LLM (Claude API) to generate ESG reports focused solely on environmental aspects (E in ESG), including calculated carbon emissions, personalized energy-saving tips and insights, utilizing recent 3 months of data. The output will follow a structured table format for key metrics and will initially be displayed on the web.
+- **Why it's important:** Provides intelligent, actionable recommendations based on multi-dimensional data from multiple measurement points, specifically tailored for environmental sustainability reporting, and presents them in a standardized, easy-to-understand format, now with quantifiable carbon impact across all monitored areas.
+- **How it works:** Flask backend communicates with the AI/LLM module, which queries MySQL for recent 3 months of data from selected devices or all devices. The LLM will calculate carbon emissions from power consumption using the given factor (0.478 kgCO₂/kWh) and then use Claude API for analysis to produce ESG-focused insights and reports formatted for web display and eventual PDF export.
 
 ## User Experience
 
 ### User Personas
-- **Homeowner:** Wants to see daily/weekly power usage, environmental conditions (temp, humidity), identify energy hogs, and get simple tips to reduce bills. Also interested in understanding their household's environmental footprint for personal awareness, including their carbon emissions.
-- **Small Business Owner:** Needs to track energy consumption for specific equipment or departments, analyze peak usage times, and optimize operational costs, potentially correlating with environmental factors like brightness/temperature. Keen on generating simplified ESG-like reports to showcase sustainability efforts, now including carbon footprint.
+- **Homeowner:** Wants to see daily/weekly power usage across different rooms (living room, bedroom, kitchen), environmental conditions (temp, humidity), identify energy hogs in specific areas, and get simple tips to reduce bills. Also interested in understanding their household's overall environmental footprint for personal awareness, including their carbon emissions per room.
+- **Small Business Owner:** Needs to track energy consumption for specific equipment, departments, or building zones, analyze peak usage times across different areas, and optimize operational costs, potentially correlating with environmental factors like brightness/temperature. Keen on generating simplified ESG-like reports to showcase sustainability efforts across their facility, now including comprehensive carbon footprint analysis.
+- **Multi-location Manager:** Oversees energy consumption across multiple buildings, facilities, or rental properties, requiring consolidated reporting and comparative analysis between different locations.
+- **Facility Manager:** Monitors energy usage across different zones within a large building (floors, departments, equipment areas) to identify optimization opportunities and track sustainability goals.
 
 ### Key User Flows
 1. User opens the web interface.
-2. The dashboard displays current electric power consumption prominently, along with other real-time sensor data.
-3. User can view individual trends for all sensor values (electric power, temp, humidity, brightness) over selected periods, based on the device's timestamp.
-4. User can request an AI-generated ESG-focused report based on daily/weekly total power consumption summaries (utilizing recent 3 months of data). The report will include calculated carbon emissions and will be displayed on the website initially, with an option for PDF export.
+2. **Device selection interface** allows choosing specific devices, device groups, or all devices for monitoring.
+3. The dashboard displays current electric power consumption prominently for selected devices, along with other real-time sensor data.
+4. User can view individual trends for all sensor values (electric power, temp, humidity, brightness) over selected periods, with options to:
+   - Compare data between different devices
+   - View consolidated data from multiple devices
+   - Filter by specific device groups or locations
+5. User can request an AI-generated ESG-focused report based on:
+   - Single device data
+   - Multiple device comparison
+   - Consolidated data from all devices
+   - Device group analysis (utilizing recent 3 months of data)
+6. The report will include calculated carbon emissions and will be displayed on the website initially, with an option for PDF export.
 
 ### UI/UX Considerations
-- Clean, intuitive dashboard design.
-- Easy navigation between different data views (daily, weekly, monthly).
+- Clean, intuitive dashboard design with clear device identification.
+- **Device management interface** for selecting, grouping, and configuring multiple devices.
+- Easy navigation between different data views (daily, weekly, monthly) and device comparisons.
+- **Device status indicators** showing online/offline status and last data reception time.
 - Responsive design for various devices (mobile, tablet, desktop).
-- Clear visual representation of data (charts, graphs) for multiple data types, prioritizing current electric power display and individual sensor trends.
-- Accessible interface for generating and viewing ESG reports, including tabular data for energy usage, recycling, and carbon emissions.
+- Clear visual representation of data (charts, graphs) for multiple data types, prioritizing current electric power display and individual sensor trends with device comparison capabilities.
+- **Device grouping and filtering** options for managing multiple devices efficiently.
+- Accessible interface for generating and viewing ESG reports, including tabular data for energy usage, recycling, and carbon emissions with device-specific and consolidated views.
 
 ## Technical Architecture
 
 ### System Components
-- **Power Measurement Module:** Arduino + ESP32 (with RTOS), collects data every 5 seconds and sends via WiFi. Prioritize guaranteed delivery over real-time for data integrity.
-- **WiFi Network:** Communication backbone for all components.
-- **Server (Raspberry Pi):** Hosts Docker containers for core services.
+- **Power Measurement Modules:** Multiple Arduino + ESP32 devices (with RTOS), each collecting data every 5 seconds and sending via WiFi. Each device identified by unique MAC address. Prioritize guaranteed delivery over real-time for data integrity.
+- **WiFi Network:** Communication backbone for all components and devices.
+- **Server (Raspberry Pi):** Hosts Docker containers for core services, capable of handling multiple simultaneous device connections.
 
 ### Docker Containers
-- **MQTT Broker (Mosquitto):** Message queue for device-to-server communication. Will be configured for persistence and potentially QoS 1/2 to ensure message delivery.
-- **Flask Application:** Python backend, handles MQTT subscription, JSON parsing, API endpoints, MySQL interaction, and LLM module integration. Will manage incoming data with an emphasis on data integrity (e.g., handling potential duplicates from QoS 1/2) and explicitly use the device-generated timestamp.
-- **Vue.js Application:** Frontend web interface, consumes Flask APIs.
-- **MySQL Database:** Persistent storage for power consumption and environmental data, with indefinite retention.
-- **AI/LLM Module:** Placeholder for a Python application that interfaces with the Claude API for data analysis and ESG report generation. This module will query MySQL for recent 3 months of data, calculate carbon emissions based on power consumption, and generate structured output (e.g., JSON representing tables) for frontend rendering and PDF export. It will focus on 'E' in ESG.
+- **MQTT Broker (Mosquitto):** Message queue for device-to-server communication supporting multiple concurrent device connections. Will be configured for persistence and potentially QoS 1/2 to ensure message delivery from all devices.
+- **Flask Application:** Python backend, handles MQTT subscription from multiple devices, JSON parsing, API endpoints, MySQL interaction, and LLM module integration. Will manage incoming data from multiple devices with an emphasis on data integrity (e.g., handling potential duplicates from QoS 1/2) and explicitly use the device-generated timestamp and deviceCode for proper attribution.
+- **Vue.js Application:** Frontend web interface, consumes Flask APIs with multi-device support.
+- **MySQL Database:** Persistent storage for power consumption and environmental data from all devices, with indefinite retention and proper device attribution.
+- **AI/LLM Module:** Python application that interfaces with the Claude API for data analysis and ESG report generation. This module will query MySQL for recent 3 months of data from specified devices or device groups, calculate carbon emissions based on power consumption, and generate structured output (e.g., JSON representing tables) for frontend rendering and PDF export. It will focus on 'E' in ESG with multi-device analysis capabilities.
 
 ### Data Models
 **`power_readings` table:**
 - `id` (PK, INT, AUTO_INCREMENT)
 - `timestamp` (DATETIME, from device)
-- `device_code` (VARCHAR(25)) - MAC 주소 형태
+- `device_code` (VARCHAR(25)) - MAC 주소 형태 (unique device identifier)
 - `temperature` (FLOAT)
 - `humidity` (FLOAT)
 - `brightness` (INT)
 - `electric` (FLOAT)
 
+**`devices` table (New):**
+- `device_code` (PK, VARCHAR(25)) - MAC address
+- `device_name` (VARCHAR(100)) - User-friendly device name
+- `location` (VARCHAR(100)) - Physical location description
+- `device_group` (VARCHAR(50)) - Group/zone assignment
+- `status` (ENUM: 'active', 'inactive', 'maintenance')
+- `last_seen` (DATETIME) - Last data reception timestamp
+- `created_at` (DATETIME)
+- `updated_at` (DATETIME)
+
 ### APIs and Integrations
-- **MQTT:** ESP32 publishes JSON payload (every 5 seconds) using a QoS level that ensures delivery (e.g., QoS 1), Flask subscribes. The JSON payload will include the `timestamp` field generated by the device.
-- **REST API (Flask):** Vue.js consumes data endpoints (e.g., `/api/power_data`, `/api/esg_report`).
-- **Internal API (Flask to LLM):** Flask calls LLM module for ESG report generation and analysis.
-- **Claude API:** AI/LLM module interacts with Anthropic's Claude API.
+- **MQTT:** Multiple ESP32 devices publish JSON payload (every 5 seconds) using a QoS level that ensures delivery (e.g., QoS 1), Flask subscribes to all device topics. The JSON payload will include the `timestamp` field generated by the device and unique `deviceCode`.
+- **REST API (Flask):** Vue.js consumes data endpoints with multi-device support:
+  - `/api/devices` - Device management endpoints
+  - `/api/devices/{device_code}/power_data` - Device-specific data
+  - `/api/power_data` - Multi-device data with filtering
+  - `/api/devices/{device_code}/esg_report` - Device-specific ESG reports
+  - `/api/esg_report` - Consolidated or comparative ESG reports
+- **Internal API (Flask to LLM):** Flask calls LLM module for ESG report generation with device selection parameters.
+- **Claude API:** AI/LLM module interacts with Anthropic's Claude API for multi-device analysis.
 
 ### Infrastructure Requirements
-- Raspberry Pi with sufficient compute and storage.
-- Stable WiFi network.
-- Docker runtime environment.
+- Raspberry Pi with sufficient compute and storage for multiple device connections.
+- Stable WiFi network capable of handling multiple simultaneous ESP32 connections.
+- Docker runtime environment optimized for multi-container workloads.
 
 ## Development Roadmap
-This roadmap focuses on establishing the core server infrastructure and a minimal working prototype, specifically adapting to the new data format, indefinite retention, prioritizing specific dashboard visualizations, and enabling ESG report generation with structured output focused on environmental aspects using recent data, including carbon emission calculations.
+This roadmap focuses on establishing the core server infrastructure and a minimal working prototype, specifically adapting to multi-device scenarios, new data format, indefinite retention, prioritizing specific dashboard visualizations, and enabling ESG report generation with structured output focused on environmental aspects using recent data, including carbon emission calculations across multiple devices.
 
 ### Phase 1: Foundation Setup
 **MVP Requirements:**
 - Install Docker and Docker Compose on Raspberry Pi.
 - Create base `docker-compose.yml` defining `mosquitto`, `mysql`, `flask_app`, `vue_app`, `ai_llm_module` (placeholder) services.
-- Configure network for inter-service communication.
+- Configure network for inter-service communication and multiple device support.
 
-### Phase 2: Core Backend and Database (Data Format Adapted, Indefinite Retention & Data Integrity Focus)
+### Phase 2: Core Backend and Database (Multi-Device Support, Data Format Adapted, Indefinite Retention & Data Integrity Focus)
 **MVP Requirements:**
 - Develop basic Flask app (`app.py`):
-    - Implement MQTT client to subscribe to power data topics, expecting messages every 5 seconds. Configure MQTT client to handle potential duplicates (QoS 1 or 2) and prioritize data receipt over real-time freshness during outages.
-    - Parse incoming JSON payload from MQTT, specifically extracting `deviceCode`, `timestamp` (from device), `temp`, `humidity`, `brightness`, and `electric`.
-    - Implement logic to store parsed data into MySQL, matching the updated `power_readings` table schema, ensuring indefinite data retention and handling potential duplicate entries gracefully.
+    - Implement MQTT client to subscribe to power data topics from multiple devices, expecting messages every 5 seconds. Configure MQTT client to handle potential duplicates (QoS 1 or 2) and prioritize data receipt over real-time freshness during outages.
+    - Parse incoming JSON payload from MQTT, specifically extracting `deviceCode`, `timestamp` (from device), `temp`, `humidity`, `brightness`, and `electric` with proper device attribution.
+    - Implement logic to store parsed data into MySQL, matching the updated `power_readings` table schema, ensuring indefinite data retention and handling potential duplicate entries gracefully across multiple devices.
 - Create `requirements.txt` for Flask.
-- Develop MySQL `init.sql` script with the updated `power_readings` table schema.
+- Develop MySQL `init.sql` script with the updated `power_readings` and new `devices` table schemas.
 - Create `Dockerfile` for Flask app.
-- Verify Flask app can receive JSON MQTT messages, parse them correctly, and save to MySQL, handling delivery guarantees.
+- Verify Flask app can receive JSON MQTT messages from multiple devices, parse them correctly, and save to MySQL with proper device identification, handling delivery guarantees.
 
-### Phase 3: Frontend Integration (Prioritized Visualizations)
+### Phase 3: Frontend Integration (Multi-Device Visualizations)
 **MVP Requirements:**
-- Develop basic Vue.js app to fetch and display power and environmental data from Flask API.
-- Create a primary dashboard component that prominently displays current electric power consumption.
-- Implement visualization components to show individual trends for all sensor values over selectable periods, aligned with the device's timestamps.
-- Implement a component/feature to display daily/weekly total power consumption summaries.
-- Configure basic Vue.js routing (if applicable for a single page).
+- Develop basic Vue.js app to fetch and display power and environmental data from Flask API with multi-device support.
+- Create a **device management interface** for device selection, filtering, and grouping.
+- Create a primary dashboard component that prominently displays current electric power consumption with device selection capabilities.
+- Implement visualization components to show individual trends for all sensor values over selectable periods, with options for:
+  - Single device view
+  - Multi-device comparison
+  - Consolidated device group view
+- Implement a component/feature to display daily/weekly total power consumption summaries with device breakdown.
+- Configure basic Vue.js routing for multi-device navigation.
 - Create `Dockerfile` for Vue.js app.
 - (Optional) Add Nginx config for Vue.js static serving.
-- Verify Vue.js can display all specified data types and visualizations from Flask.
+- Verify Vue.js can display all specified data types and visualizations from Flask with proper multi-device support.
 
-### Phase 4: AI/LLM Module for ESG Report Generation (Personalized, Structured, Environmental Focus, Carbon Emissions)
+### Phase 4: Multi-Device Management Features
 **MVP Requirements:**
-- Implement a Flask endpoint to trigger ESG report generation via the AI/LLM module.
-- The AI/LLM module will query MySQL for recent 3 months of power and environmental data, including daily/weekly power summaries.
-- The AI/LLM module will calculate carbon emissions from the retrieved `electric` data using a factor of **0.478 kgCO₂/kWh**.
-- The AI/LLM module will use Claude API to generate text for an ESG-focused report (Environmental section only), focusing on personalized energy-saving tips based on analyzed correlations and including calculated carbon emissions.
-- The generated report will include structured data in a format suitable for displaying the provided table examples, now including a "Carbon Emissions" table.
-- The generated report should be returned to Flask for direct display on the website.
+- Implement device registration and auto-discovery functionality.
+- Create device grouping and location assignment features.
+- Develop device status monitoring (online/offline, last seen).
+- Implement device-specific configuration options.
+- Create comparative analysis tools for multiple devices.
+- Add device performance and health monitoring.
+
+### Phase 5: AI/LLM Module for Multi-Device ESG Report Generation (Personalized, Structured, Environmental Focus, Carbon Emissions)
+**MVP Requirements:**
+- Implement Flask endpoints to trigger ESG report generation via the AI/LLM module with device selection parameters.
+- The AI/LLM module will query MySQL for recent 3 months of power and environmental data from specified devices or device groups, including daily/weekly power summaries.
+- The AI/LLM module will calculate carbon emissions from the retrieved `electric` data using a factor of **0.478 kgCO₂/kWh** with device-specific and consolidated calculations.
+- The AI/LLM module will use Claude API to generate text for ESG-focused reports (Environmental section only), focusing on personalized energy-saving tips based on analyzed correlations across multiple devices and including calculated carbon emissions.
+- The generated report will include structured data in a format suitable for displaying the provided table examples, now including device-specific and consolidated "Carbon Emissions" tables.
+- The generated report should be returned to Flask for direct display on the website with multi-device context.
 
 ### Future Enhancements
-- Functionality to export the ESG report as a PDF.
-- User authentication and multi-user support, starting after MVP.
-- Device management (adding/removing power measurement modules).
-- Notifications for anomalies or high usage.
-- Advanced AI analyses like predictive modeling for power consumption.
+- Functionality to export multi-device ESG reports as PDF.
+- User authentication and multi-user support with device access controls.
+- Advanced device management (adding/removing power measurement modules via web interface).
+- Device-specific notifications for anomalies or high usage.
+- Advanced AI analyses like predictive modeling for power consumption across device networks.
+- Mobile app for device management and monitoring.
+- Integration with smart home platforms and energy management systems.
 
 ## Logical Dependency Chain
 1. **Raspberry Pi OS & Docker Installation:** Absolute foundational step.
-2. **Docker Compose File:** Defines the entire service ecosystem. Cannot proceed with individual services without this.
-3. **MySQL & MQTT Broker Services:** These provide core infrastructure that Flask depends on. They should be set up and running first. MQTT broker configuration should prioritize message delivery reliability.
-4. **Flask Backend (with JSON parsing, 5-sec ingestion & Data Integrity):** Depends on MQTT for input and MySQL for output/storage. A functional Flask app is crucial.
-5. **Vue.js Frontend (Prioritized Visualizations):** Depends on the Flask API to retrieve data.
-6. **AI/LLM Module for ESG Report Generation:** Depends on a working data pipeline (Flask -> MySQL with rich, historical data).
+2. **Docker Compose File:** Defines the entire service ecosystem including multi-device support. Cannot proceed with individual services without this.
+3. **MySQL & MQTT Broker Services:** These provide core infrastructure that Flask depends on. They should be set up and running first with multi-device configuration. MQTT broker configuration should prioritize message delivery reliability from multiple sources.
+4. **Flask Backend (with Multi-Device JSON parsing, 5-sec ingestion & Data Integrity):** Depends on MQTT for input from multiple devices and MySQL for output/storage. A functional Flask app with multi-device support is crucial.
+5. **Vue.js Frontend (Multi-Device Visualizations):** Depends on the Flask API to retrieve data with multi-device filtering and comparison capabilities.
+6. **Device Management Features:** Depends on working multi-device data pipeline and frontend framework.
+7. **AI/LLM Module for Multi-Device ESG Report Generation:** Depends on a working multi-device data pipeline (Flask -> MySQL with rich, historical data from multiple devices).
 
 ## Risks and Mitigations
 
 ### Technical Challenges
-- **Risk:** Raspberry Pi performance limitations.
-- **Mitigation:** Use lean images, optimize Docker Compose, offload intensive LLM processing to cloud APIs (Claude API), monitor resource usage.
-- **Risk:** Docker networking complexity.
-- **Mitigation:** Use a simple bridge network, ensure clear naming and port mappings, test connectivity diligently.
-- **Risk:** Incorrect JSON parsing or data type mismatches.
-- **Mitigation:** Implement robust error handling and validation in Flask. Thoroughly test data insertion.
-- **Risk:** High volume of data impacting MySQL performance.
-- **Mitigation:** Monitor performance. Consider indexing relevant columns (`timestamp`, `device_code`).
-- **Risk:** MQTT message loss or duplication.
-- **Mitigation:** Configure MQTT QoS 1 or 2. Implement duplicate detection/idempotency logic in Flask. Prioritize durable sessions.
-- **Risk:** Inaccurate carbon emission calculation.
-- **Mitigation:** Acknowledge the fixed emission factor. Consider user-configurable factors in the future.
+- **Risk:** Raspberry Pi performance limitations with multiple simultaneous device connections.
+- **Mitigation:** Use lean images, optimize Docker Compose, implement connection limiting, offload intensive LLM processing to cloud APIs (Claude API), monitor resource usage and implement load balancing.
+- **Risk:** Docker networking complexity with multiple device streams.
+- **Mitigation:** Use a simple bridge network, ensure clear naming and port mappings, test connectivity diligently, implement proper MQTT topic organization.
+- **Risk:** Incorrect JSON parsing or data type mismatches from multiple devices.
+- **Mitigation:** Implement robust error handling and validation in Flask with device-specific error tracking. Thoroughly test data insertion with multiple device scenarios.
+- **Risk:** High volume of data from multiple devices impacting MySQL performance.
+- **Mitigation:** Monitor performance with multiple device loads. Consider indexing relevant columns (`timestamp`, `device_code`). Implement data archiving strategies.
+- **Risk:** MQTT message loss or duplication from multiple devices.
+- **Mitigation:** Configure MQTT QoS 1 or 2. Implement duplicate detection/idempotency logic in Flask with device-specific tracking. Prioritize durable sessions. Monitor per-device message rates.
+- **Risk:** Device synchronization and time correlation issues.
+- **Mitigation:** Implement device time synchronization checks. Handle clock drift between devices. Provide time offset correction capabilities.
+- **Risk:** Device management complexity and user interface confusion.
+- **Mitigation:** Design intuitive device grouping and filtering interfaces. Provide clear device status indicators. Implement helpful device naming and location features.
+
+### Multi-Device Specific Risks
+- **Risk:** Device identification conflicts or MAC address spoofing.
+- **Mitigation:** Implement device authentication mechanisms. Monitor for duplicate device codes. Provide device verification procedures.
+- **Risk:** Network congestion from multiple simultaneous device connections.
+- **Mitigation:** Implement connection rate limiting. Monitor network bandwidth usage. Provide device connection scheduling options.
+- **Risk:** Data correlation issues between devices with different sampling rates or network delays.
+- **Mitigation:** Use device-generated timestamps. Implement timestamp validation. Provide data alignment tools for multi-device analysis.
 
 ### MVP Definition
-- **Risk:** Scope creep.
-- **Mitigation:** Strictly adhere to defined MVP features. Prioritize getting a complete data flow and the core ESG report generation.
+- **Risk:** Scope creep with multi-device feature complexity.
+- **Mitigation:** Strictly adhere to defined MVP features. Prioritize getting a complete multi-device data flow and the core ESG report generation. Start with 2-3 devices for initial testing.
 
 ### Resource Constraints
-- **Risk:** Limited development time/expertise.
-- **Mitigation:** Break down tasks into small units. Leverage Claude for assistance. Use well-documented libraries.
+- **Risk:** Limited development time/expertise for multi-device scenarios.
+- **Mitigation:** Break down tasks into small units. Leverage Claude for assistance. Use well-documented libraries. Start with single device implementation and gradually add multi-device support.
 
 ### API Key Management
 - **Risk:** Exposure of sensitive API keys.
 - **Mitigation:** Use Docker Compose's `.env` file and ensure it is in `.gitignore`.
 
 ### Data Integrity/Loss
-- **Risk:** Data loss during MySQL container recreation.
-- **Mitigation:** Properly configure Docker volumes for MySQL data persistence.
+- **Risk:** Data loss during MySQL container recreation affecting multiple devices.
+- **Mitigation:** Properly configure Docker volumes for MySQL data persistence with backup strategies for multi-device data.
 
 ### ESG Report Quality & Personalization
-- **Risk:** LLM-generated reports may lack specificity or fail to represent tabular data accurately.
-- **Mitigation:** Provide clear, structured prompts to the LLM with specific data. Iteratively refine prompts based on quality reviews.
+- **Risk:** LLM-generated reports may lack specificity for multi-device scenarios or fail to represent tabular data accurately.
+- **Mitigation:** Provide clear, structured prompts to the LLM with specific multi-device data contexts. Iteratively refine prompts based on quality reviews. Test with various device configurations.
 
 ### PDF Export Complexity
-- **Risk:** Generating a well-formatted PDF from web content can be complex.
-- **Mitigation:** Initially focus on web display. Research libraries for future enhancement.
+- **Risk:** Generating well-formatted PDFs from multi-device web content can be complex.
+- **Mitigation:** Initially focus on web display. Research libraries for future enhancement with multi-device report formatting.
 
 ## Appendix
 
 - **Key Technologies:** Docker, Docker Compose, Flask, Vue.js, MySQL, Mosquitto MQTT Broker, Claude API.
-- **Assumed Knowledge:** Basic Linux command line, Python, JavaScript, SQL.
+- **Assumed Knowledge:** Basic Linux command line, Python, JavaScript, SQL, MQTT protocols.
 - **Carbon Emission Factor:** 0.478 kgCO₂/kWh
+- **Multi-Device Testing:** Initial testing should be conducted with 2-3 ESP32 devices to validate the multi-device architecture before scaling to larger deployments.
 
 ### Desired ESG Report Table Formats (LLM Output Structure Reference)
 *Data will be dynamic from DB, not fixed years.*
