@@ -33,7 +33,7 @@ def test_end_to_end_flow(wait_for_services):
     3. Call the API to verify the data was stored correctly.
     """
     # 1. Define and publish the test message
-    device_id = 999
+    device_id = "aa:bb:cc:dd:ee:ff"
     test_payload = {
         "deviceCode": device_id,
         "timestamp": time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),

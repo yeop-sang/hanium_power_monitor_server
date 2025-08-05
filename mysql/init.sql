@@ -4,7 +4,7 @@ USE power_measurement;
 CREATE TABLE IF NOT EXISTS power_readings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME NOT NULL,
-    device_code INT NOT NULL,
+    device_code VARCHAR(25) NOT NULL,
     temperature FLOAT COMMENT 'Celsius',
     humidity FLOAT COMMENT 'Percentage',
     brightness INT COMMENT 'Numeric value',

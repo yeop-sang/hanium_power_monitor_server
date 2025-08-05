@@ -77,7 +77,7 @@ The primary users are individuals or small businesses seeking to optimize their 
 **`power_readings` table:**
 - `id` (PK, INT, AUTO_INCREMENT)
 - `timestamp` (DATETIME, from device)
-- `device_code` (INT)
+- `device_code` (VARCHAR(25)) - MAC 주소 형태
 - `temperature` (FLOAT)
 - `humidity` (FLOAT)
 - `brightness` (INT)

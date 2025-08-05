@@ -27,7 +27,7 @@ def mock_db(mocker):
 
 def test_insert_reading(mock_db):
     """Test that insert_reading constructs and executes the correct SQL query."""
-    device_code = 1
+    device_code = "aa:bb:cc:dd:ee:ff"
     timestamp = datetime.datetime.now()
     temp = 25.5
     humidity = 60.1

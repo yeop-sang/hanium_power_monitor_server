@@ -46,7 +46,7 @@ class Database:
     # --- CRUD Methods -----------------------------------------------------
     def insert_reading(
         self,
-        device_code: int,
+        device_code: str,
         timestamp: Union[str, datetime.datetime],
         temperature: Union[float, None] = None,
         humidity: Union[float, None] = None,

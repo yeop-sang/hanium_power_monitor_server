@@ -187,7 +187,7 @@ export MQTT_BROKER_HOST=mosquitto
 CREATE TABLE power_readings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     timestamp DATETIME NOT NULL,           -- 디바이스 측정 시간
-    device_code INT NOT NULL,              -- 디바이스 식별 코드
+    device_code VARCHAR(25) NOT NULL,      -- 디바이스 MAC 주소
     temperature FLOAT,                     -- 온도 (°C)
     humidity FLOAT,                        -- 습도 (%)
     brightness INT,                        -- 조도 (Lux)

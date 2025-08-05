@@ -1,5 +1,5 @@
 ---
-description: 
+description: 함수를 수정하거나 변경할때, 해당 rule 사용하기
 globs: 
 alwaysApply: false
 ---
