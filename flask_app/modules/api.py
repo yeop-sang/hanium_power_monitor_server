@@ -45,9 +45,70 @@ def setup_routes(db):
 
     @api_blueprint.route('/summary', methods=['GET'])
     def get_summary():
-        """Placeholder for daily/weekly summary endpoint."""
-        # TODO: Implement summary logic (e.g., daily average, min/max)
-        return jsonify({"message": "Summary endpoint not yet implemented."}), 501
+        """Get summary statistics for the specified time range."""
+        time_range = request.args.get('timeRange', '24h')
+        
+        # 유효한 시간 범위인지 확인
+        valid_ranges = ['1h', '6h', '24h', '7d', '30d']
+        if time_range not in valid_ranges:
+            return jsonify({
+                "error": "Invalid time range", 
+                "valid_ranges": valid_ranges
+            }), 400
+        
+        try:
+            if not db:
+                return jsonify({"error": "Database not available"}), 500
+                
+            summary_data = db.get_summary_data(time_range)
+            
+            # 데이터 직렬화 (이미 database.py에서 처리했지만 안전을 위해)
+            serialized_data = {k: json_serializer(v) for k, v in summary_data.items()}
+            
+            return jsonify(serialized_data)
+            
+        except Exception as e:
+            return jsonify({
+                "error": "Failed to fetch summary data",
+                "details": str(e)
+            }), 500
+
+    @api_blueprint.route('/trend', methods=['GET'])
+    def get_trend():
+        """Get hourly trend data for the specified time range."""
+        time_range = request.args.get('timeRange', '24h')
+        
+        # 유효한 시간 범위인지 확인
+        valid_ranges = ['24h', '7d', '30d']
+        if time_range not in valid_ranges:
+            return jsonify({
+                "error": "Invalid time range for trend data", 
+                "valid_ranges": valid_ranges
+            }), 400
+        
+        try:
+            if not db:
+                return jsonify({"error": "Database not available"}), 500
+                
+            trend_data = db.get_hourly_trend(time_range)
+            
+            # 데이터 직렬화
+            serialized_data = []
+            for row in trend_data:
+                serialized_row = {k: json_serializer(v) for k, v in row.items()}
+                serialized_data.append(serialized_row)
+            
+            return jsonify({
+                "time_range": time_range,
+                "data": serialized_data,
+                "total_hours": len(serialized_data)
+            })
+            
+        except Exception as e:
+            return jsonify({
+                "error": "Failed to fetch trend data",
+                "details": str(e)
+            }), 500
 
     @api_blueprint.route('/esg_reports', methods=['GET'])
     def list_esg_reports():

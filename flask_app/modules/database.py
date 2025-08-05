@@ -127,3 +127,158 @@ class Database:
         except mysql.connector.Error as err:
             logging.error(f"Error fetching esg reports: {err}", exc_info=True)
             return []
+
+    def get_summary_data(self, time_range: str = '24h'):
+        """
+        Fetch summary statistics for the given time range.
+        
+        Args:
+            time_range: '1h', '6h', '24h', '7d', '30d'
+        
+        Returns:
+            dict with aggregated data (avg, min, max, total readings)
+        """
+        # 시간 범위에 따른 INTERVAL 설정
+        interval_map = {
+            '1h': 'INTERVAL 1 HOUR',
+            '6h': 'INTERVAL 6 HOUR',
+            '24h': 'INTERVAL 24 HOUR',
+            '7d': 'INTERVAL 7 DAY',
+            '30d': 'INTERVAL 30 DAY'
+        }
+        
+        interval = interval_map.get(time_range, 'INTERVAL 24 HOUR')
+        
+        query = f"""
+        SELECT 
+            COUNT(*) as total_readings,
+            AVG(temperature) as avg_temperature,
+            MIN(temperature) as min_temperature,
+            MAX(temperature) as max_temperature,
+            AVG(humidity) as avg_humidity,
+            MIN(humidity) as min_humidity,
+            MAX(humidity) as max_humidity,
+            AVG(brightness) as avg_brightness,
+            MIN(brightness) as min_brightness,
+            MAX(brightness) as max_brightness,
+            AVG(electric) as avg_electric,
+            MIN(electric) as min_electric,
+            MAX(electric) as max_electric,
+            SUM(electric) as total_electric,
+            MIN(timestamp) as period_start,
+            MAX(timestamp) as period_end
+        FROM power_readings 
+        WHERE timestamp >= NOW() - {interval}
+        """
+        
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute(query)
+                    result = cursor.fetchone()
+                    
+                    if result and result['total_readings'] > 0:
+                        return {
+                            'time_range': time_range,
+                            'total_readings': result['total_readings'],
+                            'period_start': result['period_start'],
+                            'period_end': result['period_end'],
+                            'temperature': {
+                                'avg': float(result['avg_temperature']) if result['avg_temperature'] else 0,
+                                'min': float(result['min_temperature']) if result['min_temperature'] else 0,
+                                'max': float(result['max_temperature']) if result['max_temperature'] else 0,
+                                'unit': '°C'
+                            },
+                            'humidity': {
+                                'avg': float(result['avg_humidity']) if result['avg_humidity'] else 0,
+                                'min': float(result['min_humidity']) if result['min_humidity'] else 0,
+                                'max': float(result['max_humidity']) if result['max_humidity'] else 0,
+                                'unit': '%'
+                            },
+                            'brightness': {
+                                'avg': float(result['avg_brightness']) if result['avg_brightness'] else 0,
+                                'min': float(result['min_brightness']) if result['min_brightness'] else 0,
+                                'max': float(result['max_brightness']) if result['max_brightness'] else 0,
+                                'unit': 'lx'
+                            },
+                            'electric': {
+                                'avg': float(result['avg_electric']) if result['avg_electric'] else 0,
+                                'min': float(result['min_electric']) if result['min_electric'] else 0,
+                                'max': float(result['max_electric']) if result['max_electric'] else 0,
+                                'total': float(result['total_electric']) if result['total_electric'] else 0,
+                                'unit': 'mA'
+                            }
+                        }
+                    else:
+                        return {
+                            'time_range': time_range,
+                            'total_readings': 0,
+                            'message': '해당 기간에 데이터가 없습니다.',
+                            'period_start': None,
+                            'period_end': None
+                        }
+                        
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching summary data: {err}", exc_info=True)
+            return {
+                'time_range': time_range,
+                'error': f'데이터 조회 중 오류가 발생했습니다: {str(err)}'
+            }
+
+    def get_hourly_trend(self, time_range: str = '24h'):
+        """
+        Fetch hourly aggregated data for trend analysis.
+        
+        Args:
+            time_range: '24h', '7d', '30d'
+        
+        Returns:
+            list of hourly aggregated readings
+        """
+        interval_map = {
+            '24h': 'INTERVAL 24 HOUR',
+            '7d': 'INTERVAL 7 DAY', 
+            '30d': 'INTERVAL 30 DAY'
+        }
+        
+        interval = interval_map.get(time_range, 'INTERVAL 24 HOUR')
+        
+        query = f"""
+        SELECT 
+            DATE_FORMAT(timestamp, '%Y-%m-%d %H:00:00') as hour_start,
+            COUNT(*) as readings_count,
+            AVG(temperature) as avg_temperature,
+            AVG(humidity) as avg_humidity,
+            AVG(brightness) as avg_brightness,
+            AVG(electric) as avg_electric,
+            SUM(electric) as total_electric
+        FROM power_readings 
+        WHERE timestamp >= NOW() - {interval}
+        GROUP BY DATE_FORMAT(timestamp, '%Y-%m-%d %H')
+        ORDER BY hour_start ASC
+        """
+        
+        try:
+            with self._get_connection() as conn:
+                with conn.cursor(dictionary=True) as cursor:
+                    cursor.execute(query)
+                    results = cursor.fetchall()
+                    
+                    # 데이터 형식 정리
+                    formatted_results = []
+                    for row in results:
+                        formatted_results.append({
+                            'timestamp': row['hour_start'],
+                            'readings_count': row['readings_count'],
+                            'temperature': float(row['avg_temperature']) if row['avg_temperature'] else 0,
+                            'humidity': float(row['avg_humidity']) if row['avg_humidity'] else 0,
+                            'brightness': float(row['avg_brightness']) if row['avg_brightness'] else 0,
+                            'electric_avg': float(row['avg_electric']) if row['avg_electric'] else 0,
+                            'electric_total': float(row['total_electric']) if row['total_electric'] else 0
+                        })
+                    
+                    return formatted_results
+                    
+        except mysql.connector.Error as err:
+            logging.error(f"Error fetching hourly trend: {err}", exc_info=True)
+            return []

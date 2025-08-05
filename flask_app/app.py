@@ -1,10 +1,12 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 import json
 import logging
 from flask_socketio import SocketIO
+import datetime
+from flask_socketio import join_room, leave_room
 
 from modules.mqtt_client import MQTTClient
 from modules.database import Database
@@ -21,7 +23,100 @@ logging.basicConfig(level=logging.INFO,
 # Flask & SocketIO initialization
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+
+# Connected clients tracking
+connected_clients = set()
+
+# --- Socket.IO Event Handlers ---------------------------------------------
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    client_id = request.sid
+    connected_clients.add(client_id)
+    logging.info(f"Client {client_id} connected. Total clients: {len(connected_clients)}")
+    
+    # Send connection confirmation with server status
+    socketio.emit('connection_status', {
+        'status': 'connected',
+        'client_id': client_id,
+        'server_time': datetime.datetime.now().isoformat(),
+        'mqtt_connected': mqtt_client.client.is_connected() if mqtt_client else False,
+        'db_available': db is not None
+    }, room=client_id)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    client_id = request.sid
+    connected_clients.discard(client_id)
+    logging.info(f"Client {client_id} disconnected. Total clients: {len(connected_clients)}")
+
+@socketio.on('ping')
+def handle_ping():
+    """Handle ping from client for connection health check"""
+    client_id = request.sid
+    logging.debug(f"Ping received from client {client_id}")
+    socketio.emit('pong', {
+        'timestamp': datetime.datetime.now().isoformat(),
+        'client_id': client_id
+    }, room=client_id)
+
+@socketio.on('get_latest_data')
+def handle_get_latest_data():
+    """Handle client request for latest data"""
+    client_id = request.sid
+    
+    if not db:
+        socketio.emit('error', {
+            'type': 'database_error',
+            'message': 'Database not available'
+        }, room=client_id)
+        return
+    
+    try:
+        # Get latest reading from database
+        latest_data = db.fetch_power_data(limit=1)
+        if latest_data:
+            data = latest_data[0]
+            socketio.emit('latest_data', {
+                'device_code': data.get('device_code'),
+                'timestamp': data.get('timestamp').isoformat() if data.get('timestamp') else None,
+                'temperature': float(data.get('temperature')) if data.get('temperature') else None,
+                'humidity': float(data.get('humidity')) if data.get('humidity') else None,
+                'brightness': data.get('brightness'),
+                'electric': float(data.get('electric')) if data.get('electric') else None
+            }, room=client_id)
+        else:
+            socketio.emit('error', {
+                'type': 'no_data',
+                'message': 'No data available'
+            }, room=client_id)
+            
+    except Exception as e:
+        logging.error(f"Error fetching latest data for client {client_id}: {e}")
+        socketio.emit('error', {
+            'type': 'fetch_error',
+            'message': 'Failed to fetch latest data'
+        }, room=client_id)
+
+@socketio.on('join_room')
+def handle_join_room(data):
+    """Handle client joining a specific room"""
+    client_id = request.sid
+    room = data.get('room', 'general')
+    join_room(room)
+    logging.info(f"Client {client_id} joined room: {room}")
+    socketio.emit('room_joined', {'room': room}, room=client_id)
+
+@socketio.on('leave_room')
+def handle_leave_room(data):
+    """Handle client leaving a specific room"""
+    client_id = request.sid
+    room = data.get('room', 'general')
+    leave_room(room)
+    logging.info(f"Client {client_id} left room: {room}")
+    socketio.emit('room_left', {'room': room}, room=client_id)
 
 # --- Initializations ---------------------------------------------------
 try:
