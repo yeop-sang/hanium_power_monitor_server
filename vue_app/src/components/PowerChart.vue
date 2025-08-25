@@ -2,6 +2,7 @@
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
+  Chart,
   Title,
   Tooltip,
   Legend,
@@ -10,71 +11,109 @@ import {
   LinearScale,
   PointElement
 } from 'chart.js';
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import api from '../services/api.js';
-import socket from '../services/socket.js';
+import { computed, onMounted, onUnmounted } from 'vue';
+import { useMockData } from '../composables/useMockData.js';
+import { useApiSimulation } from '../composables/useApiSimulation.js';
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, CategoryScale, LinearScale, PointElement);
 
-const labels = ref([]);
-const values = ref([]);
-const loading = ref(true);
-const interval = ref(null);
-const dataPoints = ref([]);
-const chartKey = ref(0);
+const { dashboardData, generateInitialPowerHistory, updateDashboardData } = useMockData();
+const { simulateRealTimeUpdates } = useApiSimulation();
 
-async function fetchData() {
-  try {
-    const { data } = await api.getPowerData({ limit: 50 });
-    // 데이터가 최신순으로 오므로 역순 정렬해 시간순 정렬
-    const sorted = data.slice().reverse();
-    labels.value = sorted.map(r => new Date(r.timestamp).toLocaleTimeString());
-    values.value = sorted.map(r => r.electric);
-  } catch (e) {
-    console.error('Failed to fetch power data', e);
-  } finally {
-    loading.value = false;
-  }
-}
+let updateInterval = null;
 
 onMounted(() => {
-  fetchData();
-  interval.value = setInterval(fetchData, 60000);
-  socket.on('reading', appendPoint);
+  // 초기 히스토리 데이터 생성
+  generateInitialPowerHistory();
+  
+  // 30초마다 새 데이터 포인트 추가
+  updateInterval = simulateRealTimeUpdates(() => {
+    updateDashboardData();
+  }, 30000);
 });
 
 onUnmounted(() => {
-  clearInterval(interval.value);
-  socket.off('reading', appendPoint);
+  if (updateInterval) {
+    updateInterval();
+  }
 });
 
-function appendPoint(payload) {
-  const ts = new Date(payload.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  labels.value.push(ts);
-  dataPoints.value.push(payload.electric);
-  // Keep last 50
-  if (labels.value.length > 50) {
-    labels.value.shift();
-    dataPoints.value.shift();
-  }
-  chartKey.value++;
-}
-
 const chartData = computed(() => ({
-  labels: labels.value,
+  labels: dashboardData.powerHistory.map(item => 
+    item.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+  ),
   datasets: [
     {
       label: 'Power (W)',
-      data: values.value,
+      data: dashboardData.powerHistory.map(item => item.value),
       borderColor: '#42b983',
       backgroundColor: 'rgba(66, 184, 131, 0.2)',
       fill: true,
-      tension: 0.3
+      tension: 0.3,
+      pointBackgroundColor: dashboardData.powerHistory.map(item => 
+        item.isOutlier ? '#ff4757' : '#42b983'
+      ),
+      pointBorderColor: dashboardData.powerHistory.map(item => 
+        item.isOutlier ? '#ff3742' : '#2d8659'
+      ),
+      pointRadius: dashboardData.powerHistory.map(item => 
+        item.isOutlier ? 6 : 3
+      ),
+      pointHoverRadius: dashboardData.powerHistory.map(item => 
+        item.isOutlier ? 8 : 5
+      )
     }
   ]
 }));
 
-const chartOptions = { responsive: true, maintainAspectRatio: false };
+const chartOptions = { 
+  responsive: true, 
+  maintainAspectRatio: false,
+  scales: {
+    y: {
+      beginAtZero: false,
+      title: {
+        display: true,
+        text: 'Power (W)'
+      }
+    },
+    x: {
+      title: {
+        display: true,
+        text: 'Time'
+      }
+    }
+  },
+  plugins: {
+    tooltip: {
+      callbacks: {
+        afterLabel: function(context) {
+          const dataIndex = context.dataIndex;
+          const isOutlier = dashboardData.powerHistory[dataIndex]?.isOutlier;
+          return isOutlier ? '⚠️ Outlier 감지됨' : '';
+        }
+      }
+    },
+    legend: {
+      labels: {
+        generateLabels: function(chart) {
+          const original = Chart.defaults.plugins.legend.labels.generateLabels;
+          const labels = original.call(this, chart);
+          
+          // outlier 범례 추가
+          labels.push({
+            text: '⚠️ Outlier',
+            fillStyle: '#ff4757',
+            strokeStyle: '#ff3742',
+            pointStyle: 'circle'
+          });
+          
+          return labels;
+        }
+      }
+    }
+  }
+};
 </script>
 
 <template>

@@ -1,11 +1,16 @@
 <template>
   <div class="current-power">
-    <h2>{{ currentPower }} W</h2>
+    <h2>{{ dashboardData.currentPower }} W</h2>
     <small class="timestamp">갱신 {{ lastUpdated }}</small>
   </div>
 </template>
 
 <script setup>
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useMockData } from '../composables/useMockData.js'
+import { useApiSimulation } from '../composables/useApiSimulation.js'
+
+/* 원래 코드 (백업용 - 복구 시 사용)
 import { ref, onMounted, onUnmounted } from 'vue'
 import api from '../services/api.js'
 import socket from '../services/socket.js'
@@ -33,6 +38,29 @@ onMounted(() => {
 })
 onUnmounted(() => {
   socket.off('reading', updateFromPayload) // 메모리 누수 방지
+})
+*/
+
+const { dashboardData, updateDashboardData } = useMockData()
+const { simulateRealTimeUpdates } = useApiSimulation()
+
+const lastUpdated = computed(() => {
+  return dashboardData.lastUpdated.toLocaleTimeString('ko-KR')
+})
+
+let updateInterval = null
+
+onMounted(() => {
+  // 3초마다 실시간 업데이트
+  updateInterval = simulateRealTimeUpdates(() => {
+    updateDashboardData()
+  }, 3000)
+})
+
+onUnmounted(() => {
+  if (updateInterval) {
+    updateInterval()
+  }
 })
 </script>
 

@@ -43,110 +43,50 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { getLatestEnvironmentalData, isLoading } from '../services/api.js'
-import { 
-  isConnected, 
-  isConnecting, 
-  hasError as socketHasError, 
-  safeOn, 
-  validateReadingData 
-} from '../services/socket.js'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { useMockData } from '../composables/useMockData.js'
+import { useApiSimulation } from '../composables/useApiSimulation.js'
 
-const temp = ref('--')
-const humidity = ref('--')
-const brightness = ref('--')
-const electric = ref('--')
-const lastUpdated = ref('--')
-const error = ref(null)
-const fetchInterval = ref(null)
+const { dashboardData, updateDashboardData } = useMockData()
+const { simulateRealTimeUpdates } = useApiSimulation()
 
-// 로딩 상태 (API 및 Socket 상태 기반)
-const loading = computed(() => isLoading('latest_env_data'))
+// 계산된 속성들
+const temp = computed(() => dashboardData.temperature.toFixed(1))
+const humidity = computed(() => dashboardData.humidity.toFixed(1))
+const brightness = computed(() => dashboardData.brightness.toString())
+const electric = computed(() => dashboardData.currentPower.toFixed(1))
+const lastUpdated = computed(() => dashboardData.lastUpdated.toLocaleString('ko-KR'))
 
-// 연결 상태 관리
 const connectionStatus = computed(() => {
-  if (socketHasError.value) return 'error'
-  if (isConnected.value) return 'connected'
-  if (isConnecting.value) return 'connecting'
-  return 'disconnected'
+  return dashboardData.isConnected ? 'connected' : 'disconnected'
 })
 
 const connectionStatusText = computed(() => {
-  switch (connectionStatus.value) {
-    case 'connected': return '실시간 연결됨'
-    case 'connecting': return '연결 중...'
-    case 'error': return '연결 오류'
-    case 'disconnected': return '연결 끊김'
-    default: return '알 수 없음'
-  }
+  return dashboardData.isConnected ? '실시간 연결됨' : '연결 끊김'
 })
 
-// 데이터 가져오기 함수
-async function fetchLatest() {
-  try {
-    error.value = null
-    const response = await getLatestEnvironmentalData()
-    
-    if (response.data) {
-      updateData(response.data)
-    }
-  } catch (e) {
-    console.error('Failed to fetch environmental data:', e)
-    error.value = e
-  }
-}
+const loading = computed(() => false) // 목업 데이터이므로 항상 false
+const error = computed(() => null) // 목업 데이터이므로 에러 없음
 
-// 데이터 업데이트 함수
-function updateData(data) {
-  temp.value = typeof data.temperature === 'number' ? data.temperature.toFixed(1) : '--'
-  humidity.value = typeof data.humidity === 'number' ? data.humidity.toFixed(1) : '--'  
-  brightness.value = typeof data.brightness === 'number' ? data.brightness.toString() : '--'
-  electric.value = typeof data.electric === 'number' ? data.electric.toFixed(1) : '--'
-  lastUpdated.value = data.timestamp ? new Date(data.timestamp).toLocaleString() : new Date().toLocaleString()
-}
-
-// Socket 데이터 처리 함수
-function handleSocketData(payload) {
-  if (validateReadingData(payload)) {
-    updateData(payload)
-    error.value = null // 성공적으로 데이터를 받으면 에러 클리어
-  } else {
-    console.warn('Invalid socket data received:', payload)
-  }
-}
-
-// 재시도 함수
-function retry() {
-  error.value = null
-  fetchLatest()
-}
-
-// 초기화 및 정리
-let unsubscribeSocket = null
+let updateInterval = null
 
 onMounted(() => {
-  fetchLatest()
-  
-  // 30초마다 백업 데이터 가져오기 (Socket이 실패할 경우)
-  fetchInterval.value = setInterval(() => {
-    if (!isConnected.value || error.value) {
-      fetchLatest()
-    }
-  }, 30000)
-  
-  // Socket 이벤트 리스너 등록 (안전한 방식)
-  unsubscribeSocket = safeOn('reading', handleSocketData)
+  // 5초마다 실시간 업데이트
+  updateInterval = simulateRealTimeUpdates(() => {
+    updateDashboardData()
+  }, 5000)
 })
 
 onUnmounted(() => {
-  if (fetchInterval.value) {
-    clearInterval(fetchInterval.value)
-  }
-  if (unsubscribeSocket) {
-    unsubscribeSocket()
+  if (updateInterval) {
+    updateInterval()
   }
 })
+
+// 재시도 함수 (목업에서는 실제로는 아무것도 하지 않음)
+function retry() {
+  // 목업 데이터에서는 항상 성공
+}
 </script>
 
 <style scoped>
