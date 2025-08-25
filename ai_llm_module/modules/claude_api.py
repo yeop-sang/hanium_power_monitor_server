@@ -13,19 +13,29 @@ class ClaudeAPI:
     """Claude API integration for ESG report generation."""
     
     def __init__(self, api_key: Optional[str] = None):
-        """Initialize Claude API client.
+        """Initialize Claude API client with simplified configuration"""
+        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
         
-        Args:
-            api_key: Anthropic API key (defaults to environment variable)
-        """
-        self.api_key = api_key or os.environ.get('ANTHROPIC_API_KEY')
         if not self.api_key:
-            raise ValueError("ANTHROPIC_API_KEY must be provided or set as environment variable")
+            logger.error("ANTHROPIC_API_KEY not found in environment variables")
+            raise ValueError("ANTHROPIC_API_KEY is required")
         
-        self.client = anthropic.Anthropic(api_key=self.api_key)
-        self.model = "claude-3-sonnet-20240229"  # Latest Claude model
+        self.model = "claude-3-haiku-20240307"
+        self.client = None
         
-        logger.info(f"Initialized Claude API client with model: {self.model}")
+        # Try to initialize the client with error handling
+        try:
+            import anthropic
+            # Use minimal initialization to avoid dependency conflicts
+            self.client = anthropic.Anthropic(
+                api_key=self.api_key,
+                # Remove any problematic kwargs
+            )
+            logger.info("Claude API client initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize Claude API client: {e}")
+            # Don't raise here, allow graceful degradation
+            self.client = None
     
     def generate_esg_report(self, daily_data: pd.DataFrame, carbon_data: pd.DataFrame, 
                            monthly_data: Optional[pd.DataFrame] = None) -> Dict[str, Any]:

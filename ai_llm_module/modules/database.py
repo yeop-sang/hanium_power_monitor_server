@@ -166,7 +166,6 @@ class Database:
             SELECT 
                 YEAR(timestamp) as year,
                 MONTH(timestamp) as month,
-                CONCAT(YEAR(timestamp), '-', LPAD(MONTH(timestamp), 2, '0')) as year_month,
                 AVG(temperature) as avg_temp,
                 AVG(humidity) as avg_humidity,
                 AVG(brightness) as avg_brightness,
@@ -178,15 +177,19 @@ class Database:
             FROM power_readings
             WHERE timestamp >= %s
             GROUP BY YEAR(timestamp), MONTH(timestamp)
-            ORDER BY year, month ASC
+            ORDER BY YEAR(timestamp), MONTH(timestamp)
             """
             
-            logger.info(f"Generating monthly summaries from {months_ago}")
             cursor.execute(query, (months_ago,))
-            result = cursor.fetchall()
+            results = cursor.fetchall()
             
-            logger.info(f"Generated {len(result)} monthly summaries")
-            return pd.DataFrame(result)
+            if not results:
+                logger.warning(f"No monthly summary data found for the last {months} months")
+                return pd.DataFrame()
+            
+            df = pd.DataFrame(results)
+            logger.info(f"Retrieved {len(df)} monthly summary records")
+            return df
             
         except mysql.connector.Error as e:
             logger.error(f"Error generating monthly summaries: {e}")

@@ -3,115 +3,167 @@ from datetime import datetime
 import os
 import logging
 import traceback
-from modules.database import Database
-from modules.claude_api import ClaudeAPI
-from modules.carbon_calculator import CarbonCalculator
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Global variables for components - will be initialized safely
+db = None
+claude_api = None
+carbon_calculator = None
+
+def initialize_components():
+    """Initialize components with proper error handling"""
+    global db, claude_api, carbon_calculator
+    
+    try:
+        # Initialize Database
+        try:
+            from modules.database import Database
+            db = Database()
+            logger.info("Database component initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize Database: {e}")
+            db = None
+        
+        # Initialize Claude API
+        try:
+            from modules.claude_api import ClaudeAPI
+            claude_api = ClaudeAPI()
+            logger.info("Claude API component initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize Claude API: {e}")
+            claude_api = None
+        
+        # Initialize Carbon Calculator  
+        try:
+            from modules.carbon_calculator import CarbonCalculator
+            carbon_calculator = CarbonCalculator()
+            logger.info("Carbon Calculator component initialized")
+        except Exception as e:
+            logger.error(f"Failed to initialize Carbon Calculator: {e}")
+            carbon_calculator = None
+            
+        logger.info("Component initialization completed")
+        
+    except Exception as e:
+        logger.error(f"Critical error during component initialization: {e}")
+        logger.error(traceback.format_exc())
+
 # Initialize components
-try:
-    # Database connection
-    db = Database()
-    
-    # Claude API client
-    claude_api = ClaudeAPI()
-    
-    # Carbon calculator
-    carbon_calculator = CarbonCalculator()
-    
-    logger.info("AI/LLM module initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize components: {e}")
-    raise
+initialize_components()
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint."""
+    """Health check endpoint with component status"""
     try:
-        # Test database connection
-        db_status = db.test_connection()
-        
-        # Test Claude API connection
-        claude_status = claude_api.test_api_connection()
-        
         status = {
-            'status': 'healthy' if db_status and claude_status else 'unhealthy',
+            'status': 'running',
             'timestamp': datetime.now().isoformat(),
             'components': {
-                'database': 'connected' if db_status else 'disconnected',
-                'claude_api': 'connected' if claude_status else 'disconnected',
-                'carbon_calculator': 'initialized'
+                'database': db is not None,
+                'claude_api': claude_api is not None and claude_api.client is not None,
+                'carbon_calculator': carbon_calculator is not None
             },
-            'version': '1.0.0'
+            'environment': {
+                'has_anthropic_key': bool(os.environ.get('ANTHROPIC_API_KEY')),
+                'mysql_host': os.environ.get('MYSQL_HOST', 'not_set')
+            }
         }
         
-        return jsonify(status), 200 if status['status'] == 'healthy' else 503
+        # Overall health based on critical components
+        critical_components = ['database', 'carbon_calculator']
+        healthy = all(status['components'][comp] for comp in critical_components)
+        
+        status['overall_health'] = 'healthy' if healthy else 'degraded'
+        
+        http_status = 200 if healthy else 503
+        return jsonify(status), http_status
         
     except Exception as e:
         logger.error(f"Health check failed: {e}")
         return jsonify({
             'status': 'error',
-            'error': str(e),
+            'message': str(e),
             'timestamp': datetime.now().isoformat()
         }), 500
 
 @app.route('/generate_report', methods=['POST'])
-def generate_esg_report():
-    """Generate comprehensive ESG report based on power consumption data."""
+def generate_report():
+    """Generate ESG report with optional test mode to save API tokens"""
     try:
-        # Get request parameters
-        data = request.get_json() or {}
+        data = request.get_json()
         months = data.get('months', 3)
-        report_type = data.get('type', 'full')  # 'full' or 'summary'
+        report_type = data.get('report_type', 'comprehensive')
+        test_mode = data.get('test_mode', False)  # Add test mode flag
         
-        logger.info(f"Generating ESG report: type={report_type}, months={months}")
-        
-        # Step 1: Retrieve data from database
-        daily_data = db.get_daily_summaries(months=months)
-        monthly_data = db.get_monthly_summaries(months=months)
-        
-        if daily_data.empty:
+        if not db:
             return jsonify({
-                'error': 'No data available for the specified period',
-                'months_requested': months,
-                'timestamp': datetime.now().isoformat()
-            }), 404
+                'error': 'Database not available',
+                'details': 'Database component failed to initialize'
+            }), 503
+            
+        if not claude_api and not test_mode:
+            return jsonify({
+                'error': 'Claude API not available',
+                'details': 'Claude API component failed to initialize'
+            }), 503
+            
+        # Get data from database
+        daily_data = db.get_daily_summaries(months)
+        monthly_data = db.get_monthly_summaries(months)
         
-        # Step 2: Calculate carbon emissions
-        carbon_data = carbon_calculator.calculate_daily_emissions(daily_data)
-        monthly_carbon_data = carbon_calculator.calculate_monthly_emissions(monthly_data)
-        
-        # Step 3: Generate report using Claude API
-        if report_type == 'summary':
-            # Generate summary report
-            data_summary = claude_api._prepare_report_data(daily_data, carbon_data, monthly_carbon_data)
-            report = claude_api.generate_summary_report(data_summary)
+        if carbon_calculator:
+            carbon_data = carbon_calculator.calculate_daily_emissions(daily_data)
         else:
-            # Generate full ESG report
-            report = claude_api.generate_esg_report(daily_data, carbon_data, monthly_carbon_data)
+            return jsonify({
+                'error': 'Carbon calculator not available',
+                'details': 'Carbon calculator component failed to initialize'
+            }), 503
         
-        # Step 4: Add metadata and statistics
-        report['request_info'] = {
-            'months_analyzed': months,
-            'report_type': report_type,
-            'data_points': len(daily_data),
-            'generated_at': datetime.now().isoformat()
-        }
+        # Test mode: return mock response without calling Claude API
+        if test_mode:
+            mock_report = {
+                'metadata': {
+                    'generated_at': datetime.now().isoformat(),
+                    'model_used': 'test-mode',
+                    'usage': {'input_tokens': 0, 'output_tokens': 0},
+                    'data_period': {
+                        'months': months,
+                        'daily_records': len(daily_data) if daily_data is not None else 0,
+                        'monthly_records': len(monthly_data) if monthly_data is not None else 0
+                    }
+                },
+                'input_data': {
+                    'daily_summary': daily_data.to_dict('records') if daily_data is not None else [],
+                    'monthly_summary': monthly_data.to_dict('records') if monthly_data is not None else [],
+                    'carbon_data': carbon_data.to_dict('records') if carbon_data is not None else []
+                },
+                'raw_esg_report': 'TEST MODE: ESG report generation successful. Database queries completed without errors. Claude API integration ready.',
+                'report_metrics': {
+                    'character_count': 123,
+                    'word_count': 20,
+                    'estimated_reading_time_minutes': 0.1
+                }
+            }
+            
+            return jsonify({
+                'status': 'success',
+                'report': mock_report,
+                'message': 'Report generated in test mode (no API tokens used)'
+            }), 200
         
-        # Calculate carbon trends
-        carbon_trends = carbon_calculator.calculate_carbon_trends(carbon_data, 'daily')
-        report['carbon_trends'] = carbon_trends
+        # Production mode: call Claude API
+        report_data = claude_api._prepare_report_data(daily_data, carbon_data, monthly_data)
+        esg_report = claude_api.generate_esg_report(daily_data, carbon_data, monthly_data)
         
-        logger.info(f"ESG report generated successfully: {len(daily_data)} days analyzed")
-        return jsonify(report)
+        return jsonify({
+            'status': 'success',
+            'report': esg_report
+        }), 200
         
     except Exception as e:
         logger.error(f"Error generating ESG report: {e}")

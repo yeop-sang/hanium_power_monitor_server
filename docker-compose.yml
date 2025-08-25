@@ -4,11 +4,13 @@ services:
   ai_llm_module:
     build: ./ai_llm_module
     restart: always
+    ports:
+      - "5002:5002"
     depends_on:
       - mysql
       - flask_app
     environment:
-      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_HOST: mysql
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: power_measurement
